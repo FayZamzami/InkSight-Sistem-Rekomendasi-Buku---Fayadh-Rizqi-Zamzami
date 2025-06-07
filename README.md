@@ -72,36 +72,68 @@ Dataset ini memiliki keunggulan karena sudah mencakup informasi rating agregat (
 **Rubrik/Kriteria Tambahan (Opsional)**:
 - Melakukan beberapa tahapan yang diperlukan untuk memahami data, contohnya teknik visualisasi data atau exploratory data analysis.
 
-#### 1. Analisis Missing Values
-Hasil pemeriksaan missing values pada dataset:
-- Total entri data: 9,868 baris
-- Missing values yang terdeteksi: 1 nilai pada kolom 'dtype'
-- Persentase data lengkap: 99.99%
-- Tidak ditemukan missing values pada kolom-kolom utama (open, high, low, close, adj_close, volume)
+#### 1. LOAD DATASET
+Pada bagian ini melakukan import library yang akan di gunakan dan melakukan read pada datasetnya dan melihat hed dan describ nya
 
-#### 2. Analisis Outliers
-Menggunakan metode IQR (Interquartile Range), ditemukan outliers pada setiap fitur:
-- Open: 1,275 outliers terdeteksi
-- High: 1,276 outliers terdeteksi
-- Low: 1,276 outliers terdeteksi
-- Close: 1,278 outliers terdeteksi
-- Adj_Close: 1,324 outliers terdeteksi
-- Volume: 89 outliers terdeteksi
+**1. Informasi Dataset**
+- Dataset memiliki 11,123 baris dan 12 kolom
+- Semua kolom memiliki data lengkap (non-null)
+- Memory usage dataset adalah 1.8+ MB
 
-Batas outlier untuk setiap fitur:
-| Fitur | Lower Bound | Upper Bound |
-|-------|-------------|-------------|
-| Open | 23.45 | 187.32 |
-| High | 24.12 | 189.56 |
-| Low | 22.78 | 184.91 |
-| Close | 23.15 | 186.44 |
-| Adj_Close | 22.89 | 185.67 |
-| Volume | 1.2M | 89.5M |
+**2. Tipe Data pada Dataset**
+- **Integer (int64)**:
+  * bookID: ID unik buku
+  * isbn13: Nomor ISBN 13 digit
+  * num_pages: Jumlah halaman
+  * ratings_count: Jumlah rating
+  * text_reviews_count: Jumlah review teks
+- **Float (float64)**:
+  * average_rating: Rating rata-rata buku
+- **Object**:
+  * title: Judul buku
+  * authors: Nama penulis
+  * isbn: Nomor ISBN 10 digit
+  * language_code: Kode bahasa
+  * publication_date: Tanggal publikasi
+  * publisher: Penerbit
 
-#### 3. Analisis Duplikasi Data
-- Tidak ditemukan data duplikat dalam dataset
-- Setiap baris merepresentasikan hari trading yang unik
-- Total baris unik: 9,868 (100% dari dataset)
+**3. Analisis Statistik Deskriptif**
+- **Count**: Semua kolom memiliki 11,123 entri, menunjukkan tidak ada missing values
+- **Mean (Rata-rata)**:
+  * average_rating: 3.93 (skala 1-5)
+  * num_pages: 336.40 halaman
+  * ratings_count: 17,942.85 rating per buku
+  * text_reviews_count: 542.04 review per buku
+- **Std (Standar Deviasi)**:
+  * average_rating: 0.35, menunjukkan variasi rating yang relatif kecil
+  * num_pages: 241.15, menunjukkan variasi yang cukup besar dalam jumlah halaman
+- **Min dan Max**:
+  * average_rating: min 1.0, max 5.0
+  * num_pages: min 0, max 6,576 halaman
+  * ratings_count: min 0, max 4,597,666 rating
+  * text_reviews_count: min 0, max 94,265 review
+
+**4. Sample Data**
+Dari 20 baris pertama yang ditampilkan, terlihat beberapa pola:
+- Banyak buku dari penulis terkenal seperti J.K. Rowling dan Douglas Adams
+- Rating rata-rata berkisar antara 3.74 hingga 4.78
+- Bahasa dominan adalah bahasa Inggris (eng)
+- Jumlah halaman bervariasi dari 6 hingga 3,342
+- Publisher termasuk penerbit besar seperti Scholastic dan Random House
+
+Dataset ini menunjukkan koleksi buku yang komprehensif dengan informasi detail tentang rating dan review pembaca, yang sangat cocok untuk sistem rekomendasi buku.
+
+#### 2. Check Missing Value dan Duplikasi
+
+**Check Missing Value :**
+   - Hasil menunjukkan bahwa tidak ada missing values (nilai 0) pada semua kolom
+   - Ini berarti dataset sangat lengkap dan tidak memerlukan penanganan untuk missing values
+   - Semua 11,123 baris data memiliki nilai yang valid untuk setiap kolomnya
+
+**Check Duplikasi :**
+   - Tidak ditemukan data duplikat dalam dataset
+   - Setiap baris data adalah unik
+   - Hal ini menunjukkan kualitas data yang baik karena tidak ada redundansi
 
 #### 4. Karakteristik Distribusi Data
 Analisis statistik deskriptif menunjukkan:

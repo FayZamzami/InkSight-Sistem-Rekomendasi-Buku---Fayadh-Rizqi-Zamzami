@@ -47,6 +47,8 @@ Di era digital saat ini, industri buku mengalami transformasi signifikan dengan 
 
 Dalam proyek ini, saya menggunakan Goodreads Books Dataset yang berisi informasi komprehensif mengenai buku-buku beserta rating dari pembaca. Dataset ini diambil dari [Kaggle](https://www.kaggle.com/datasets/jealousleopard/goodreadsbooks), yang merupakan kumpulan data dari platform Goodreads, salah satu platform review buku terbesar dengan lebih dari 90 juta pengguna.
 
+Link Dataset : https://www.kaggle.com/datasets/jealousleopard/goodreadsbooks
+
 Selanjutnya uraikanlah seluruh variabel atau fitur pada data. Sebagai contoh:  
 
 ### Variabel

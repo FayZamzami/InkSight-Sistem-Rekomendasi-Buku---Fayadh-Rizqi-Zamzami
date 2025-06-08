@@ -20,8 +20,6 @@ Di era digital saat ini, industri buku mengalami transformasi signifikan dengan 
 
 
 
-
-
 ## Business Understanding
 
 ### Problem Statements
@@ -91,3 +89,122 @@ Berdasarkan analisis yang telah dilakukan, diperoleh hasil sebagai berikut:
 - Total pengguna dalam dataset berjumlah 278858
 - Data rating terdiri dari 1149780 entri, dengan 340556 buku yang telah menerima rating, dan 105283 pengguna yang telah memberikan penilaian
 - Skala rating berkisar antara 0 hingga 10
+
+
+# Book Recommendation System - Data Loading & Initial Exploration
+
+## 📊 Data Loading
+
+Tahap pertama dalam pengembangan sistem rekomendasi adalah memuat dataset yang akan digunakan untuk training model.
+
+```python
+# Load Data
+base_dir = "/content/"
+books = pd.read_csv(base_dir+"Books.csv")
+ratings = pd.read_csv(base_dir+"Ratings.csv")
+users = pd.read_csv(base_dir+"Users.csv")
+```
+
+### Dataset Overview
+
+Project ini menggunakan **Book Recommendation Dataset** yang terdiri dari tiga file utama:
+
+| Dataset | Deskripsi | Jumlah Records |
+| --- | --- | --- |
+| **Books.csv** | Informasi detail buku (ISBN, judul, penulis, penerbit, dll) | 271,360 buku |
+| **Ratings.csv** | Data interaksi user-book dengan rating 0-10 | 1,149,780 rating |
+| **Users.csv** | Profil pengguna (ID, lokasi, usia) | 278,858 users |
+
+### 🔍 Exploratory Data Analysis
+
+#### Books Dataset
+
+```python
+books.head()
+```
+
+Dataset books berisi informasi lengkap tentang buku dengan fitur-fitur berikut:
+
+- **ISBN**: Unique identifier untuk setiap buku
+- **Book-Title**: Judul buku
+- **Book-Author**: Nama penulis
+- **Year-Of-Publication**: Tahun publikasi
+- **Publisher**: Nama penerbit
+- **Image-URL-S/M/L**: URL gambar cover buku dalam berbagai ukuran
+
+#### Key Insights dari Initial Exploration:
+
+***
+
+# 🔧 Data Preprocessing - Column Standardization
+
+## Tujuan Standardisasi Kolom
+
+Tahap preprocessing pertama adalah **standardisasi nama kolom** untuk memastikan konsistensi dalam penamaan dan mempermudah akses data selama pengembangan model.
+
+## Implementasi
+
+```python
+# Standardisasi nama kolom untuk semua dataset
+books.columns = books.columns.str.lower()
+books.columns = books.columns.str.replace("-","_")
+
+ratings.columns = ratings.columns.str.lower()
+ratings.columns = ratings.columns.str.replace("-","_")
+
+users.columns = users.columns.str.lower()
+users.columns = users.columns.str.replace("-","_")
+```
+
+## Cara Kerja & Parameter
+
+### 1. **Konversi ke Huruf Kecil**
+
+```python
+.str.lower()
+```
+
+| Parameter | Fungsi | Contoh Transformasi |
+| --- | --- | --- |
+| **`.str.lower()`** | Mengkonversi semua huruf menjadi lowercase | `"Book-Title"` → `"book-title"` |
+
+### 2. **Penggantian Karakter**
+
+```python
+.str.replace("-", "_")
+```
+
+| Parameter | Fungsi | Nilai |
+| --- | --- | --- |
+| **Pattern**: `"-"` | Target karakter yang akan diganti | Tanda hubung |
+| **Replacement**: `"_"` | Karakter pengganti | Underscore |
+
+## Transformasi Kolom
+
+### Before Standardization:
+
+```javascript
+Books: ['ISBN', 'Book-Title', 'Book-Author', 'Year-Of-Publication', 'Publisher']
+Ratings: ['User-ID', 'ISBN', 'Book-Rating']
+Users: ['User-ID', 'Location', 'Age']
+```
+
+### After Standardization:
+
+```javascript
+Books: ['isbn', 'book_title', 'book_author', 'year_of_publication', 'publisher']
+Ratings: ['user_id', 'isbn', 'book_rating']
+Users: ['user_id', 'location', 'age']
+```
+
+
+## Verifikasi Hasil
+
+```python
+# Menampilkan dataset users setelah standardisasi
+users.head()
+```
+
+Standardisasi ini memastikan **data consistency** yang sangat penting untuk **maintainability** dan **reliability** dalam seluruh pipeline data science project.
+
+***

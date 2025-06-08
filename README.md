@@ -747,3 +747,398 @@ print(language_stats.sort_values('count', ascending=False).head(10))
 - Strong correlation (0.87) antara ratings dan reviews
 - Menunjukkan user engagement yang konsisten
 
+## Data Preperationn
+
+# **Data Preparation - Basic Data Exploration & Column Name Fixing**
+
+## **📋 Penjelasan Kode**
+
+### **🔧 Cara Kerja Kode**
+
+Bagian ini merupakan tahap awal data preparation yang melakukan eksplorasi dasar dan pembersihan nama kolom. Berikut adalah breakdown dari setiap komponen:
+
+#### **1. Dataset Shape Exploration**
+
+```python
+print(f"Shape dataset: {df_books.shape}")
+```
+
+- **Fungsi**: Menampilkan dimensi dataset (jumlah baris × kolom)
+- **Method**: `shape` attribute dari pandas DataFrame
+- **Output**: Tuple (11123, 13) yang berarti 11,123 buku dengan 13 atribut
+
+#### **2. Column Name Inspection**
+
+```python
+for i, col in enumerate(df_books.columns):
+    print(f"{i}: '{col}'")
+```
+
+- **Fungsi**: Iterasi melalui semua nama kolom dengan indeks
+- **Method**: `enumerate()` untuk mendapatkan index dan value
+- **Purpose**: Mengidentifikasi masalah formatting pada nama kolom
+- **Benefit**: Memudahkan debugging dan identifikasi anomali
+
+#### **3. Column Name Cleaning**
+
+```python
+df_books.columns = df_books.columns.str.strip()
+```
+
+- **Fungsi**: Menghilangkan whitespace di awal dan akhir nama kolom
+- **Method**: `str.strip()` pada pandas Index object
+- **Target**: Mengatasi masalah seperti `'  num_pages'` menjadi `'num_pages'`
+- **Impact**: Mencegah error saat accessing kolom
+
+#### **4. Missing Values Check**
+
+```python
+print(f"\nMissing values:\n{df_books.isnull().sum()}")
+```
+
+- **Fungsi**: Menghitung jumlah nilai null pada setiap kolom
+- **Method**: `isnull().sum()` - kombinasi boolean mask dan aggregation
+- **Output**: Series dengan nama kolom sebagai index dan count null sebagai value
+
+***
+
+## **⚙️ Parameter dan Fungsi**
+
+### **1. Shape Attribute**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `df_books.shape` | tuple | Mengembalikan (n_rows, n_columns) |
+| **Return** | (11123, 13) | 11,123 baris, 13 kolom |
+
+### **2. Enumerate Function**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `df_books.columns` | Index | Pandas column index object |
+| `start` | int | Starting index (default: 0) |
+| **Return** | enumerate object | (index, column_name) pairs |
+
+### **3. String Strip Method**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `chars` | str | Characters to remove (default: whitespace) |
+| **Method** | `str.strip()` | Removes leading/trailing characters |
+| **Application** | Column names | Applied to all column names simultaneously |
+
+### **4. Missing Values Detection**
+
+| Method | Function | Output |
+| --- | --- | --- |
+| `isnull()` | Boolean mask | True for null values |
+| `sum()` | Aggregation | Count of True values per column |
+| **Combined** | `isnull().sum()` | Count of missing values per column |
+
+***
+
+## **📊 Analisis Output Mendalam**
+
+### **🔍 1. Dataset Dimensions**
+
+```javascript
+Shape dataset: (11123, 13)
+```
+
+**Interpretasi:**
+
+- **Rows (11,123)**: Ukuran dataset cukup besar untuk collaborative filtering
+- **Columns (13)**: Atribut yang komprehensif untuk sistem rekomendasi
+- **Memory Impact**: ~1.8MB, manageable untuk processing
+- **Model Suitability**: Cukup untuk training neural collaborative filtering
+
+### **🔍 2. Column Name Issues**
+
+```javascript
+Original: '  num_pages'  ← Masalah: Extra spaces
+Fixed:    'num_pages'    ← Solusi: Clean formatting
+```
+
+**Masalah yang Teridentifikasi:**
+
+- **Kolom 7**: `'  num_pages'` memiliki 2 spasi di awal
+- **Impact**: Dapat menyebabkan `KeyError` saat accessing
+- **Solution**: `str.strip()` menghilangkan whitespace
+
+**Before vs After Comparison:**
+
+| Index | Before | After | Status |
+| --- | --- | --- | --- |
+| 0-6 | ✅ Clean | ✅ Clean | No change |
+| 7 | ❌ `'  num_pages'` | ✅ `'num_pages'` | **Fixed** |
+| 8-12 | ✅ Clean | ✅ Clean | No change |
+
+### **🔍 3. Data Completeness Analysis**
+
+```javascript
+Missing values:
+bookID                0  ← Perfect
+title                 0  ← Perfect  
+authors               0  ← Perfect
+average_rating        0  ← Critical for CF
+isbn                  0  ← Perfect
+isbn13                0  ← Perfect
+language_code         0  ← Perfect
+num_pages             0  ← Perfect
+ratings_count         0  ← Critical for CF
+text_reviews_count    0  ← Perfect
+publication_date      0  ← Perfect
+publisher             0  ← Perfect
+publication_year      0  ← Perfect
+```
+
+**Key Insights:**
+
+- **🎯 100% Data Completeness**: Tidak ada missing values
+- **🔑 Critical Columns**: `average_rating` dan `ratings_count` lengkap
+- **⚡ Ready for Processing**: Tidak perlu imputation atau handling missing data
+- **🚀 Model Training**: Dapat langsung proceed ke tahap berikutnya
+
+
+# **Data Preparation - Data Cleaning & Filtering**
+
+## **📋 Tujuan dan Cara Kerja**
+
+Tahap ini bertujuan membersihkan dataset berdasarkan insight EDA untuk menghasilkan data berkualitas tinggi yang optimal untuk collaborative filtering.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. Dataset Protection**
+
+```python
+df_clean = df_books.copy()
+```
+
+- **Fungsi**: Membuat salinan independen dataset
+- **Parameter**: `copy()` - deep copy untuk melindungi data original
+- **Tujuan**: Mencegah modifikasi data asli selama cleaning
+
+#### **2. Invalid Rating Removal**
+
+```python
+df_clean = df_clean[df_clean['average_rating'] > 0]
+```
+
+- **Fungsi**: Menghilangkan buku dengan rating 0 (invalid/unrated)
+- **Parameter**: `> 0` - kondisi boolean filtering
+- **Hasil**: 11,123 → 11,098 buku (-25 buku, -0.22%)
+
+#### **3. Popularity-Based Filtering**
+
+```python
+min_ratings_book = 30
+df_clean = df_clean[df_clean['ratings_count'] >= min_ratings_book]
+```
+
+- **Fungsi**: Filter buku dengan minimum rating count
+- **Parameter**: `min_ratings_book = 30` - threshold untuk reliability
+- **Hasil**: 11,098 → 9,697 buku (-1,401 buku, -12.6%)
+
+#### **4. Page Count Outlier Removal**
+
+```python
+df_clean = df_clean[(df_clean['num_pages'] >= 10) & (df_clean['num_pages'] <= 1500)]
+```
+
+- **Fungsi**: Menghilangkan outlier jumlah halaman
+- **Parameter**: Range 10-1500 halaman (realistic book length)
+- **Operator**: `&` untuk AND condition
+- **Hasil**: 9,697 → 9,548 buku (-149 buku, -1.5%)
+
+#### **5. Outlier Capping (Winsorization)**
+
+```python
+ratings_count_95th = df_clean['ratings_count'].quantile(0.95)
+text_reviews_95th = df_clean['text_reviews_count'].quantile(0.95)
+
+df_clean['ratings_count_capped'] = df_clean['ratings_count'].clip(upper=ratings_count_95th)
+df_clean['text_reviews_count_capped'] = df_clean['text_reviews_count'].clip(upper=text_reviews_95th)
+```
+
+- **Fungsi**: Membatasi nilai ekstrem tanpa menghapus data
+- **Parameter**: 
+- `quantile(0.95)` - persentil ke-95 sebagai upper bound
+- `clip(upper=value)` - capping nilai maksimum
+- **Hasil**: Ratings capped pada 70,664, Reviews pada 2,512
+
+# **Data Preparation - Feature Engineering**
+
+## **📋 Tujuan dan Cara Kerja**
+
+Tahap ini mengubah dan menciptakan fitur baru berdasarkan insight EDA untuk meningkatkan kualitas prediksi model collaborative filtering.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. Publication Year Extraction**
+
+```python
+def extract_year_improved(date_str):
+    # Method 1: DateTime parsing
+    year = pd.to_datetime(date_str, format='mixed').year
+    # Method 2: Regex extraction  
+    year_match = re.findall(r'\b(19|20)\d{2}\b', str(date_str))
+    # Validation: 1900-2020 range
+    return year if 1900 <= year <= 2020 else None
+
+df_clean['publication_year'] = df_clean['publication_date'].apply(extract_year_improved)
+df_clean['publication_year'] = df_clean['publication_year'].fillna(2003)  # Median dari EDA
+```
+
+- **Fungsi**: Ekstrak tahun publikasi dengan dual-method approach
+- **Parameter**: 
+- `format='mixed'` - flexible datetime parsing
+- `r'\b(19|20)\d{2}\b'` - regex untuk tahun 1900-2099
+- `fillna(2003)` - median berdasarkan EDA
+- **Validasi**: Range 1900-2020 untuk realistic years
+
+#### **2. Author Processing**
+
+```python
+def get_primary_author(authors_str):
+    return str(authors_str).split('-')[0].strip()
+
+def count_authors(authors_str):
+    return len(str(authors_str).split('-'))
+
+df_clean['primary_author'] = df_clean['authors'].apply(get_primary_author)
+df_clean['author_count'] = df_clean['authors'].apply(count_authors)
+```
+
+- **Fungsi**: Ekstrak penulis utama dan hitung jumlah penulis
+- **Parameter**: 
+- `split('-')` - delimiter berdasarkan dataset description
+- `strip()` - remove whitespace
+- `len()` - count co-authors
+
+#### **3. Enhanced Rating Categorization**
+
+```python
+def categorize_rating_enhanced(rating):
+    if rating >= 4.2:    return 'Excellent'     # Top quartile
+    elif rating >= 3.96: return 'Very Good'    # Above median  
+    elif rating >= 3.77: return 'Good'         # Above Q1
+    elif rating >= 3.0:  return 'Average'
+    else:                return 'Below Average'
+```
+
+- **Fungsi**: Kategorisasi rating berdasarkan distribusi statistik EDA
+- **Parameter**: Thresholds berdasarkan quartiles (Q1=3.77, Median=3.96, Q3=4.2)
+- **Output**: 5 kategori verbal untuk interpretability
+
+#### **4. Page Count Categorization**
+
+```python
+def categorize_pages_enhanced(pages):
+    if pages <= 200:   return 'Short'      # Below median
+    elif pages <= 300: return 'Medium'     # Around median (299)
+    elif pages <= 450: return 'Long'       # Around Q3 (416)
+    else:              return 'Very Long'   # Above Q3
+```
+
+- **Fungsi**: Kategorisasi berdasarkan distribusi halaman dari EDA
+- **Parameter**: Thresholds (200, 300, 450) berdasarkan statistical analysis
+- **Logic**: Pembagian quartile-based untuk balanced distribution
+
+#### **5. Bayesian Popularity Score**
+
+```python
+def calculate_popularity_enhanced(row):
+    v = row['ratings_count_capped']        # Vote count
+    R = row['average_rating']              # Book rating
+    C = df_clean['average_rating'].mean()  # Global mean (3.93)
+    m = df_clean['ratings_count'].quantile(0.6)  # Threshold
+    
+    # Bayesian average formula
+    weighted_rating = (v / (v + m)) * R + (m / (v + m)) * C
+    return weighted_rating
+```
+
+- **Fungsi**: Menghitung popularity score menggunakan Bayesian average
+- **Parameter**:
+- `v` - jumlah rating (vote count)
+- `R` - rating individual buku
+- `C` - global mean rating (3.93)
+- `m` - threshold dari 60th percentile
+- **Formula**: Weighted combination untuk handle books dengan sedikit rating
+
+#### **6. Engagement Score**
+
+```python
+df_clean['engagement_score'] = df_clean['text_reviews_count_capped'] / (df_clean['ratings_count_capped'] + 1)
+```
+
+- **Fungsi**: Mengukur rasio review terhadap rating
+- **Parameter**: 
+- `+1` untuk prevent division by zero
+- Menggunakan capped values untuk outlier control
+- **Insight**: Berdasarkan korelasi 0.87 antara ratings dan reviews dari EDA
+
+#### **7. Language Grouping**
+
+```python
+def group_language(lang_code):
+    lang_code = str(lang_code).lower()
+    if lang_code in ['eng', 'en-us', 'en-gb']: return 'english'
+    elif lang_code in ['spa', 'fre', 'ger', 'ita']: return 'european'  
+    elif lang_code in ['jpn', 'zho', 'kor']: return 'asian'
+    else: return 'other'
+```
+
+- **Fungsi**: Mengelompokkan bahasa berdasarkan regional similarity
+- **Parameter**: Lists bahasa per kategori berdasarkan EDA insights
+- **Logic**: Reduce dimensionality dari 25+ languages ke 4 groups
+
+#### **8. Publication Era Categorization**
+
+```python
+def categorize_era(year):
+    if year < 1980:   return 'Classic'       # Pre-digital era
+    elif year < 2000: return 'Modern'        # 80s-90s
+    elif year < 2010: return 'Contemporary'  # 2000s
+    else:             return 'Recent'        # 2010+
+```
+
+- **Fungsi**: Kategorisasi berdasarkan era publikasi
+- **Parameter**: Thresholds (1980, 2000, 2010) untuk historical periods
+- **Rationale**: Capture technological and cultural shifts in publishing
+
+***
+
+## **📊 Ringkasan Fitur Baru**
+
+### **Created Features Summary**
+
+| Feature | Type | Purpose | Based On |
+| --- | --- | --- | --- |
+| `publication_year` | Numeric | Temporal analysis | Date extraction + EDA median |
+| `primary_author` | Categorical | Author-based filtering | String processing |
+| `author_count` | Numeric | Collaboration indicator | Delimiter counting |
+| `rating_category` | Categorical | Quality segments | EDA quartiles |
+| `page_category` | Categorical | Length segments | EDA distribution |
+| `popularity_score` | Numeric | Bayesian popularity | Statistical formula |
+| `engagement_score` | Numeric | User interaction ratio | EDA correlation insight |
+| `language_group` | Categorical | Regional grouping | EDA language analysis |
+| `publication_era` | Categorical | Historical periods | Temporal segmentation |
+
+### **Feature Engineering Benefits**
+
+- **Dimensionality Reduction**: 25+ languages → 4 groups
+- **Statistical Grounding**: Thresholds berdasarkan EDA quartiles
+- **Interpretability**: Categorical features untuk business understanding
+- **Model Performance**: Bayesian scoring untuk better recommendations
+-  **Outlier Handling**: Capped values dalam calculations
+
+### **Key Technical Improvements**
+
+1. **Robust Year Extraction**: Dual-method dengan validation
+2. **Bayesian Popularity**: Handles low-rating books better
+3. **Engagement Metric**: Novel feature dari correlation insight
+4. **Statistical Categorization**: Data-driven thresholds, bukan arbitrary
+5. **Missing Value Strategy**: Median imputation berdasarkan EDA
+
+Dataset sekarang memiliki 9 fitur engineered tambahan yang siap untuk model collaborative filtering dengan improved predictive power dan interpretability.

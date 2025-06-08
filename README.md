@@ -1133,12 +1133,432 @@ def categorize_era(year):
 - **Model Performance**: Bayesian scoring untuk better recommendations
 -  **Outlier Handling**: Capped values dalam calculations
 
-### **Key Technical Improvements**
+# **Data Preparation - Enhanced Synthetic User Data Generation**
 
-1. **Robust Year Extraction**: Dual-method dengan validation
-2. **Bayesian Popularity**: Handles low-rating books better
-3. **Engagement Metric**: Novel feature dari correlation insight
-4. **Statistical Categorization**: Data-driven thresholds, bukan arbitrary
-5. **Missing Value Strategy**: Median imputation berdasarkan EDA
+## **📋 Tujuan dan Cara Kerja**
 
-Dataset sekarang memiliki 9 fitur engineered tambahan yang siap untuk model collaborative filtering dengan improved predictive power dan interpretability.
+Tahap ini menghasilkan data interaksi user-book sintetis yang realistis berdasarkan insight EDA, karena dataset asli hanya berisi rating agregat tanpa individual user interactions yang dibutuhkan untuk collaborative filtering.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. Random Seed & Configuration**
+
+```python
+np.random.seed(42)
+n_users = 2000
+```
+
+- **Fungsi**: Memastikan reproducibility dan set jumlah user sintetis
+- **Parameter**: 
+- `seed=42` - untuk consistent random generation
+- `n_users=2000` - balance antara diversity dan computational efficiency
+
+#### **2. User Profile Generation**
+
+```python
+user_profiles = []
+for user_id in range(n_users):
+    lang_pref = np.random.choice(['english', 'european', 'asian', 'other'],
+                                p=[0.85, 0.10, 0.03, 0.02])
+    
+    era_pref = np.random.choice(['Classic', 'Modern', 'Contemporary', 'Recent'],
+                               p=[0.1, 0.2, 0.4, 0.3])
+    
+    rating_bias = np.random.normal(0, 0.2)
+```
+
+**Cara Kerja:**
+
+- **Language Preference**: Distribusi berdasarkan EDA (85% English dominance)
+- **Era Preference**: Weighted sampling berdasarkan publication distribution
+- **Rating Bias**: Personal rating tendency dengan normal distribution
+
+**Parameter Detail:**
+
+| Parameter | Value | Function | Basis |
+| --- | --- | --- | --- |
+| `lang_pref` probabilities | [0.85, 0.10, 0.03, 0.02] | Language distribution | EDA insight (94.7% English) |
+| `era_pref` probabilities | [0.1, 0.2, 0.4, 0.3] | Publication era weights | EDA temporal distribution |
+| `rating_bias` | Normal(0, 0.2) | Personal rating tendency | Realistic user variation |
+
+#### **3. Interaction Count Generation**
+
+```python
+n_interactions = int(np.random.lognormal(3.2, 0.6))
+n_interactions = min(max(n_interactions, 20), 150)
+```
+
+- **Fungsi**: Generate realistic number of books per user
+- **Parameter**:
+- `lognormal(3.2, 0.6)` - right-skewed distribution (most users read few books)
+- `min=20, max=150` - realistic bounds untuk active users
+- **Logic**: Mimics real-world reading patterns (heavy-tailed distribution)
+
+#### **4. Book Preference Filtering**
+
+```python
+preferred_books = df_clean[
+    (df_clean['language_group'] == profile['language_pref']) |
+    (df_clean['publication_era'] == profile['era_pref'])
+]
+
+# 70% from preferred, 30% from all books
+pref_sample_size = int(n_interactions * 0.7)
+other_sample_size = n_interactions - pref_sample_size
+```
+
+**Cara Kerja:**
+
+- **Preference Matching**: Filter books berdasarkan user language dan era preference
+- **Hybrid Sampling**: 70% dari preferred books, 30% random (simulate discovery)
+- **Fallback Strategy**: Jika preferred books tidak cukup, sample dari semua books
+
+**Parameter Logic:**
+
+- `70/30 split` - balance antara preference consistency dan serendipity
+- `OR condition` - user bisa suka language ATAU era (flexible preferences)
+
+#### **5. Popularity-Weighted Book Selection**
+
+```python
+weights = available_books['popularity_score'].values
+weights = weights / weights.sum()
+
+selected_books = np.random.choice(
+    available_books['bookID'].values,
+    size=n_interactions,
+    replace=False,
+    p=weights
+)
+```
+
+- **Fungsi**: Select books dengan probability berdasarkan popularity
+- **Parameter**:
+- `weights` - normalized popularity scores
+- `replace=False` - prevent duplicate selections
+- `p=weights` - weighted probability distribution
+- **Logic**: Popular books lebih likely dipilih (realistic behavior)
+
+#### **6. Rating Generation with User Bias**
+
+```python
+user_rating = book_avg + profile['rating_bias'] + np.random.normal(0, 0.3)
+user_rating = np.clip(user_rating, 1, 5)
+```
+
+**Cara Kerja:**
+
+- **Base Rating**: Mulai dari book's average rating
+- **User Bias**: Apply personal rating tendency
+- **Noise Addition**: Random variation dengan normal(0, 0.3)
+- **Range Clipping**: Ensure rating dalam valid range [1, 5]
+
+**Parameter Detail:**
+
+| Component | Function | Parameter | Purpose |
+| --- | --- | --- | --- |
+| `book_avg` | Base rating | From dataset | Realistic starting point |
+| `rating_bias` | Personal tendency | Normal(0, 0.2) | Individual user characteristics |
+| `noise` | Random variation | Normal(0, 0.3) | Natural rating variability |
+| `clip(1, 5)` | Range validation | [1, 5] bounds | Valid rating scale |
+
+#### **7. Timestamp Generation**
+
+```python
+'timestamp': np.random.randint(1, 1000000)
+```
+
+- **Fungsi**: Generate random timestamps untuk temporal ordering
+- **Parameter**: Range 1-1,000,000 untuk sufficient uniqueness
+- **Purpose**: Enable temporal-based analysis jika diperlukan
+
+***
+
+## **📊 Technical Implementation Details**
+
+### **Probabilistic Modeling**
+
+```python
+# Language preference distribution (based on EDA)
+P(English) = 0.85    # Dominant language group
+P(European) = 0.10   # Secondary group  
+P(Asian) = 0.03      # Minority but high-quality
+P(Other) = 0.02      # Rare languages
+```
+
+### **Interaction Distribution**
+
+```python
+# Lognormal parameters for realistic reading patterns
+μ = 3.2  # Log-scale mean
+σ = 0.6  # Log-scale standard deviation
+# Results in: median ≈ 24 books, mean ≈ 30 books, some heavy readers >100
+```
+
+### **Rating Generation Formula**
+
+```javascript
+Final_Rating = Clip(Book_Avg + User_Bias + Noise, 1, 5)
+
+Where:
+- Book_Avg: Dataset average rating for the book
+- User_Bias: Normal(0, 0.2) - personal rating tendency  
+- Noise: Normal(0, 0.3) - situational variation
+- Clip: Ensure valid range [1, 5]
+```
+
+***
+
+## **🎯 Realism Features**
+
+### **1. User Heterogeneity**
+
+- **Language Preferences**: Berdasarkan actual distribution
+- **Era Preferences**: Temporal reading patterns
+- **Rating Bias**: Individual rating tendencies
+
+### **2. Book Selection Logic**
+
+- **Preference-Based**: 70% sesuai user preferences
+- **Discovery Element**: 30% random exploration
+- **Popularity Bias**: Weighted selection berdasarkan popularity_score
+
+### **3. Rating Realism**
+
+- **Book Quality**: Start dari actual book rating
+- **Personal Variation**: Individual user characteristics
+- **Natural Noise**: Random situational factors
+
+### **4. Interaction Patterns**
+
+- **Heavy-Tailed Distribution**: Few heavy readers, many casual readers
+- **Bounded Range**: 20-150 books per user (realistic limits)
+- **Temporal Component**: Random timestamps untuk ordering
+
+***
+
+# **Data Preparation - Enhanced Collaborative Filtering Preprocessing**
+
+## **📋 Tujuan dan Cara Kerja**
+
+Tahap ini mempersiapkan data interaksi sintetis untuk model collaborative filtering dengan fokus pada kualitas data dan adaptabilitas preprocessing berdasarkan karakteristik dataset.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. User Filtering (Adjusted Threshold)**
+
+```python
+min_ratings_user = 10  # Turunkan dari 15
+valid_users = [user for user, count in df_interactions['userId'].value_counts().items()
+               if count >= min_ratings_user]
+filtered_interactions = df_interactions[df_interactions['userId'].isin(valid_users)]
+```
+
+**Cara Kerja:**
+
+- **Threshold Reduction**: Menurunkan minimum dari 15 ke 10 untuk retain lebih banyak data
+- **User Activity Analysis**: Menghitung jumlah rating per user menggunakan `value_counts()`
+- **Quality Filter**: Hanya user dengan aktivitas sufficient yang dipertahankan
+
+**Parameter Detail:**
+
+| Parameter | Value | Function | Rationale |
+| --- | --- | --- | --- |
+| `min_ratings_user` | 10 | Minimum interactions per user | Balance antara quality vs quantity |
+| `value_counts()` | - | Count interactions per user | Statistical analysis |
+| `list comprehension` | - | Filter valid users | Efficient filtering |
+
+#### **2. Book Filtering (Adjusted Threshold)**
+
+```python
+min_user_ratings = 3  # Turunkan dari 8
+valid_books_cf = [book for book, count in filtered_interactions['bookID'].value_counts().items()
+                  if count >= min_user_ratings]
+filtered_interactions = filtered_interactions[filtered_interactions['bookID'].isin(valid_books_cf)]
+```
+
+**Cara Kerja:**
+
+- **Book Popularity Filter**: Minimum 3 users per book (reduced dari 8)
+- **Cold Start Prevention**: Eliminasi books dengan terlalu sedikit interactions
+- **Data Quality**: Ensure reliable recommendations untuk each book
+
+**Parameter Logic:**
+
+- `min_user_ratings = 3` - minimal viable sample size untuk book recommendations
+- Progressive filtering - apply setelah user filtering untuk optimal results
+
+#### **3. Adaptive Data Splitting Strategy**
+
+```python
+# Check data sufficiency for stratified split
+unique_users = filtered_interactions['userId'].nunique()
+min_test_size = int(0.2 * len(filtered_interactions))
+
+if min_test_size < unique_users:
+    # Simple random split
+    train_data, test_data = train_test_split(filtered_interactions, test_size=0.2, random_state=42)
+else:
+    # Stratified split with validation
+    user_counts = filtered_interactions['userId'].value_counts()
+    valid_users_for_split = user_counts[user_counts >= 5].index
+    
+    if len(valid_users_for_split) < 10:
+        # Fallback to simple split
+        train_data, test_data = train_test_split(filtered_interactions, test_size=0.2, random_state=42)
+    else:
+        # Stratified split
+        filtered_for_split = filtered_interactions[filtered_interactions['userId'].isin(valid_users_for_split)]
+        train_data, test_data = train_test_split(
+            filtered_for_split, test_size=0.2, random_state=42, stratify=filtered_for_split['userId']
+        )
+```
+
+**Cara Kerja Logic Tree:**
+
+```javascript
+Data Assessment
+├── Sufficient for Stratified? (min_test_size >= unique_users)
+│   ├── Yes → Check User Sample Size
+│   │   ├── Users with ≥5 interactions ≥ 10?
+│   │   │   ├── Yes → Stratified Split
+│   │   │   └── No → Simple Random Split
+│   └── No → Simple Random Split
+```
+
+**Parameter Breakdown:**
+
+| Condition | Threshold | Purpose | Fallback |
+| --- | --- | --- | --- |
+| `min_test_size < unique_users` | 20% of data | Sufficient test size | Simple split |
+| `user_counts >= 5` | 5 interactions | Stratification viability | Simple split |
+| `valid_users_for_split < 10` | 10 users | Minimum for stratification | Simple split |
+
+#### **4. ID Mapping Creation**
+
+```python
+# Create bidirectional mappings
+user_ids = filtered_interactions['userId'].unique().tolist()
+book_ids = filtered_interactions['bookID'].unique().tolist()
+
+user_to_index = {user_id: i for i, user_id in enumerate(user_ids)}
+book_to_index = {book_id: i for i, book_id in enumerate(book_ids)}
+index_to_user = {i: user_id for user_id, i in user_to_index.items()}
+index_to_book = {i: book_id for book_id, i in book_to_index.items()}
+```
+
+**Cara Kerja:**
+
+- **Unique ID Extraction**: Get semua unique user dan book IDs
+- **Forward Mapping**: Original ID → Sequential Index (untuk model input)
+- **Reverse Mapping**: Sequential Index → Original ID (untuk result interpretation)
+- **Bidirectional Access**: Enable efficient lookup dalam kedua arah
+
+**Mapping Structure:**
+
+```python
+user_to_index: {original_user_id: 0, 1, 2, ...}
+index_to_user: {0: original_user_id, 1: original_user_id, ...}
+book_to_index: {original_book_id: 0, 1, 2, ...}
+index_to_book: {0: original_book_id, 1: original_book_id, ...}
+```
+
+#### **5. Data Format Conversion**
+
+```python
+def map_ids_enhanced(row):
+    return {
+        'user': user_to_index[row['userId']],
+        'book': book_to_index[row['bookID']],
+        'rating': row['rating'],
+        'timestamp': row.get('timestamp', 0)
+    }
+
+train_mapped = train_data.apply(map_ids_enhanced, axis=1).tolist()
+test_mapped = test_data.apply(map_ids_enhanced, axis=1).tolist()
+```
+
+**Cara Kerja:**
+
+- **Row-wise Transformation**: Apply mapping function ke setiap interaction
+- **Dictionary Format**: Convert ke format yang model-friendly
+- **Safe Access**: `row.get('timestamp', 0)` dengan default value
+- **List Conversion**: Final format sebagai list of dictionaries
+
+**Output Format:**
+
+```python
+[
+    {'user': 0, 'book': 15, 'rating': 4.2, 'timestamp': 12345},
+    {'user': 0, 'book': 23, 'rating': 3.8, 'timestamp': 12346},
+    ...
+]
+```
+
+***
+
+## **📊 Technical Analysis**
+
+### **1. Filtering Impact Assessment**
+
+```javascript
+Progressive Data Reduction:
+Original Interactions → User Filter → Book Filter → Final Dataset
+
+Example Flow:
+60,000 interactions → 55,000 (user filter) → 50,000 (book filter)
+```
+
+### **2. Split Strategy Decision Matrix**
+
+| Data Condition | Strategy | Rationale | Trade-offs |
+| --- | --- | --- | --- |
+| Large dataset, many users | Stratified | Balanced user representation | More complex |
+| Medium dataset | Simple random | Sufficient randomization | Less control |
+| Small dataset | Simple random | Avoid overfitting to users | Potential bias |
+
+### **3. Mapping Efficiency**
+
+```python
+# Time Complexity Analysis:
+user_to_index lookup: O(1) - dictionary access
+ID conversion: O(n) - linear scan through data
+Memory usage: O(u + b) where u=users, b=books
+```
+
+## **⚙️ Implementation Best Practices**
+
+### **1. Error Handling**
+
+```python
+# Robust mapping dengan error checking
+def safe_map_ids(row):
+    try:
+        return map_ids_enhanced(row)
+    except KeyError as e:
+        print(f"Missing ID in mapping: {e}")
+        return None
+```
+
+### **2. Memory Optimization**
+
+```python
+# Memory-efficient processing untuk large datasets
+chunk_size = 10000
+processed_chunks = []
+for chunk in pd.read_csv('interactions.csv', chunksize=chunk_size):
+    processed_chunk = process_chunk(chunk)
+    processed_chunks.append(processed_chunk)
+```
+
+### **3. Validation Checks**
+
+```python
+# Data integrity validation
+assert len(train_mapped) + len(test_mapped) <= len(filtered_interactions)
+assert all(0 <= item['user'] < len(user_ids) for item in train_mapped)
+assert all(0 <= item['book'] < len(book_ids) for item in train_mapped)
+```
+
+Preprocessing ini menghasilkan data yang optimal untuk collaborative filtering dengan balance antara data quality, quantity, dan computational efficiency.
+

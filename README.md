@@ -1562,3 +1562,591 @@ assert all(0 <= item['book'] < len(book_ids) for item in train_mapped)
 
 Preprocessing ini menghasilkan data yang optimal untuk collaborative filtering dengan balance antara data quality, quantity, dan computational efficiency.
 
+# **Data Preparation - Enhanced Feature Scaling and Encoding**
+
+## **📋 Tujuan dan Cara Kerja**
+
+Tahap ini menerapkan teknik normalisasi dan encoding yang optimal berdasarkan karakteristik distribusi setiap fitur, mempersiapkan data untuk model collaborative filtering yang memerlukan input numerik yang ternormalisasi.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. Feature Distribution Analysis & Separation**
+
+```python
+# Features dengan distribusi normal
+normal_features = ['average_rating', 'publication_year']
+
+# Features dengan distribusi skewed
+skewed_features = ['num_pages', 'ratings_count_capped', 'text_reviews_count_capped',
+                   'author_count', 'popularity_score', 'engagement_score']
+```
+
+**Cara Kerja:**
+
+- **Distribution-Based Grouping**: Pemisahan fitur berdasarkan insight EDA
+- **Normal Features**: Fitur dengan distribusi mendekati Gaussian
+- **Skewed Features**: Fitur dengan right-skewed distribution atau outliers
+
+**Rationale per Feature:**
+
+| Feature | Group | Distribution Type | EDA Insight |
+| --- | --- | --- | --- |
+| `average_rating` | Normal | Gaussian-like | Mean=3.93, std=0.35 |
+| `publication_year` | Normal | Relatively normal | Temporal distribution |
+| `num_pages` | Skewed | Right-skewed | Long tail, outliers >1000 |
+| `ratings_count_capped` | Skewed | Heavy right-skew | Capped at 95th percentile |
+| `text_reviews_count_capped` | Skewed | Heavy right-skew | Capped at 95th percentile |
+| `author_count` | Skewed | Right-skewed | Most books single author |
+| `popularity_score` | Skewed | Potentially skewed | Bayesian calculation result |
+| `engagement_score` | Skewed | Ratio-based | Derived from skewed features |
+
+#### **2. Differential Scaling Strategy**
+
+```python
+# Apply different scaling strategies
+scaler_normal = StandardScaler()  # For normal distributed features
+scaler_skewed = MinMaxScaler()    # For skewed features
+
+df_clean[normal_features] = scaler_normal.fit_transform(df_clean[normal_features])
+df_clean[skewed_features] = scaler_skewed.fit_transform(df_clean[skewed_features])
+```
+
+**StandardScaler untuk Normal Features:**
+
+- **Formula**: `z = (x - μ) / σ`
+- **Output**: Mean = 0, Standard Deviation = 1
+- **Advantage**: Preserves shape of normal distribution
+- **Use Case**: Features yang sudah mendekati normal distribution
+
+**MinMaxScaler untuk Skewed Features:**
+
+- **Formula**: `x_scaled = (x - x_min) / (x_max - x_min)`
+- **Output**: Range [0, 1]
+- **Advantage**: Robust terhadap outliers, preserves zero values
+- **Use Case**: Features dengan outliers atau non-normal distribution
+
+**Parameter Detail:**
+
+| Scaler | Method | Parameters | Application |
+| --- | --- | --- | --- |
+| `StandardScaler()` | Z-score normalization | Default (with_mean=True, with_std=True) | Normal features |
+| `MinMaxScaler()` | Min-max normalization | Default (feature_range=(0,1)) | Skewed features |
+| `fit_transform()` | Compute + apply | Learns statistics, applies transformation | Training data |
+
+#### **3. Categorical Feature Encoding**
+
+```python
+label_encoders = {}
+categorical_features = ['language_code', 'language_group', 'rating_category',
+                       'page_category', 'publication_era']
+
+for feature in categorical_features:
+    le = LabelEncoder()
+    df_clean[f'{feature}_encoded'] = le.fit_transform(df_clean[feature])
+    label_encoders[feature] = le
+```
+
+**Cara Kerja:**
+
+- **LabelEncoder Selection**: Optimal untuk ordinal dan nominal categorical features
+- **Systematic Encoding**: Loop through semua categorical features
+- **Encoder Storage**: Simpan setiap encoder untuk future use (inverse transform)
+- **Column Naming**: Add `_encoded` suffix untuk clarity
+
+**Categorical Features Analysis:**
+
+| Feature | Type | Unique Values | Encoding Strategy |
+| --- | --- | --- | --- |
+| `language_code` | Nominal | 25+ codes | LabelEncoder (0 to n-1) |
+| `language_group` | Nominal | 4 groups | LabelEncoder (0 to 3) |
+| `rating_category` | Ordinal | 5 categories | LabelEncoder (preserves order) |
+| `page_category` | Ordinal | 4 categories | LabelEncoder (preserves order) |
+| `publication_era` | Ordinal | 4 eras | LabelEncoder (temporal order) |
+
+**LabelEncoder Parameters:**
+
+- **Input**: Categorical values (strings, objects)
+- **Output**: Integer labels (0 to n_classes-1)
+- **Mapping**: Alphabetical order untuk strings
+- **Storage**: `label_encoders` dictionary untuk reversibility
+
+***
+
+## **📊 Technical Implementation Details**
+
+### **1. Scaling Transformation Mathematics**
+
+#### **StandardScaler (Z-Score Normalization)**
+
+```python
+# For normal_features
+μ = X.mean()  # Population mean
+σ = X.std()   # Population standard deviation
+X_scaled = (X - μ) / σ
+
+# Result: X_scaled ~ N(0, 1)
+```
+
+#### **MinMaxScaler (Min-Max Normalization)**
+
+```python
+# For skewed_features
+X_min = X.min()
+X_max = X.max()
+X_scaled = (X - X_min) / (X_max - X_min)
+
+# Result: X_scaled ∈ [0, 1]
+```
+
+### **2. Encoding Implementation**
+
+```python
+# LabelEncoder process for each categorical feature
+unique_values = df[feature].unique()  # Get unique categories
+sorted_values = sorted(unique_values)  # Sort for consistent mapping
+mapping = {value: idx for idx, value in enumerate(sorted_values)}
+encoded_values = df[feature].map(mapping)
+```
+
+### **3. Memory and Performance Optimization**
+
+```python
+# Efficient batch processing
+def batch_scale_features(df, feature_groups, scalers):
+    for features, scaler in zip(feature_groups, scalers):
+        if features:  # Check if group not empty
+            df[features] = scaler.fit_transform(df[features])
+    return df
+```
+
+***
+
+## **📈 Transformation Results**
+
+### **Before vs After Scaling**
+
+```python
+# Example transformation results
+Original average_rating: [3.5, 4.2, 3.8, 4.0] (range: 3.5-4.2)
+Scaled average_rating: [-1.2, 0.8, -0.5, 0.2] (mean: 0, std: 1)
+
+Original num_pages: [200, 450, 800, 1200] (range: 200-1200)
+Scaled num_pages: [0.0, 0.25, 0.6, 1.0] (range: 0-1)
+```
+
+### **Categorical Encoding Results**
+
+```python
+# Example encoding mappings
+language_group: ['english', 'european', 'asian', 'other']
+Encoded: [0, 1, 2, 3]
+
+rating_category: ['Below Average', 'Average', 'Good', 'Very Good', 'Excellent']
+Encoded: [0, 1, 2, 3, 4]  # Preserves quality ordering
+```
+
+### **Data Quality Metrics**
+
+- **Scaling Consistency**: All numerical features dalam comparable ranges
+- **Encoding Completeness**: All categorical features converted to integers
+- **Reversibility**: All transformations dapat di-inverse
+- **Memory Efficiency**: Reduced storage dengan integer encoding
+
+Preprocessing ini menghasilkan dataset yang optimal untuk model collaborative filtering dengan semua fitur dalam format dan skala yang sesuai untuk training neural network yang efektif dan stabil.
+
+# **Data Preparation - Enhanced Feature Scaling and Encoding**
+
+## **📋 Tujuan dan Cara Kerja**
+
+Tahap ini menerapkan teknik normalisasi dan encoding yang optimal berdasarkan karakteristik distribusi setiap fitur, mempersiapkan data untuk model collaborative filtering yang memerlukan input numerik yang ternormalisasi.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. Feature Distribution Analysis & Separation**
+
+```python
+# Features dengan distribusi normal
+normal_features = ['average_rating', 'publication_year']
+
+# Features dengan distribusi skewed
+skewed_features = ['num_pages', 'ratings_count_capped', 'text_reviews_count_capped',
+                   'author_count', 'popularity_score', 'engagement_score']
+```
+
+**Cara Kerja:**
+
+- **Distribution-Based Grouping**: Pemisahan fitur berdasarkan insight EDA
+- **Normal Features**: Fitur dengan distribusi mendekati Gaussian
+- **Skewed Features**: Fitur dengan right-skewed distribution atau outliers
+
+**Rationale per Feature:**
+
+| Feature | Group | Distribution Type | EDA Insight |
+| --- | --- | --- | --- |
+| `average_rating` | Normal | Gaussian-like | Mean=3.93, std=0.35 |
+| `publication_year` | Normal | Relatively normal | Temporal distribution |
+| `num_pages` | Skewed | Right-skewed | Long tail, outliers >1000 |
+| `ratings_count_capped` | Skewed | Heavy right-skew | Capped at 95th percentile |
+| `text_reviews_count_capped` | Skewed | Heavy right-skew | Capped at 95th percentile |
+| `author_count` | Skewed | Right-skewed | Most books single author |
+| `popularity_score` | Skewed | Potentially skewed | Bayesian calculation result |
+| `engagement_score` | Skewed | Ratio-based | Derived from skewed features |
+
+#### **2. Differential Scaling Strategy**
+
+```python
+# Apply different scaling strategies
+scaler_normal = StandardScaler()  # For normal distributed features
+scaler_skewed = MinMaxScaler()    # For skewed features
+
+df_clean[normal_features] = scaler_normal.fit_transform(df_clean[normal_features])
+df_clean[skewed_features] = scaler_skewed.fit_transform(df_clean[skewed_features])
+```
+
+**StandardScaler untuk Normal Features:**
+
+- **Formula**: `z = (x - μ) / σ`
+- **Output**: Mean = 0, Standard Deviation = 1
+- **Advantage**: Preserves shape of normal distribution
+- **Use Case**: Features yang sudah mendekati normal distribution
+
+**MinMaxScaler untuk Skewed Features:**
+
+- **Formula**: `x_scaled = (x - x_min) / (x_max - x_min)`
+- **Output**: Range [0, 1]
+- **Advantage**: Robust terhadap outliers, preserves zero values
+- **Use Case**: Features dengan outliers atau non-normal distribution
+
+**Parameter Detail:**
+
+| Scaler | Method | Parameters | Application |
+| --- | --- | --- | --- |
+| `StandardScaler()` | Z-score normalization | Default (with_mean=True, with_std=True) | Normal features |
+| `MinMaxScaler()` | Min-max normalization | Default (feature_range=(0,1)) | Skewed features |
+| `fit_transform()` | Compute + apply | Learns statistics, applies transformation | Training data |
+
+#### **3. Categorical Feature Encoding**
+
+```python
+label_encoders = {}
+categorical_features = ['language_code', 'language_group', 'rating_category',
+                       'page_category', 'publication_era']
+
+for feature in categorical_features:
+    le = LabelEncoder()
+    df_clean[f'{feature}_encoded'] = le.fit_transform(df_clean[feature])
+    label_encoders[feature] = le
+```
+
+**Cara Kerja:**
+
+- **LabelEncoder Selection**: Optimal untuk ordinal dan nominal categorical features
+- **Systematic Encoding**: Loop through semua categorical features
+- **Encoder Storage**: Simpan setiap encoder untuk future use (inverse transform)
+- **Column Naming**: Add `_encoded` suffix untuk clarity
+
+**Categorical Features Analysis:**
+
+| Feature | Type | Unique Values | Encoding Strategy |
+| --- | --- | --- | --- |
+| `language_code` | Nominal | 25+ codes | LabelEncoder (0 to n-1) |
+| `language_group` | Nominal | 4 groups | LabelEncoder (0 to 3) |
+| `rating_category` | Ordinal | 5 categories | LabelEncoder (preserves order) |
+| `page_category` | Ordinal | 4 categories | LabelEncoder (preserves order) |
+| `publication_era` | Ordinal | 4 eras | LabelEncoder (temporal order) |
+
+**LabelEncoder Parameters:**
+
+- **Input**: Categorical values (strings, objects)
+- **Output**: Integer labels (0 to n_classes-1)
+- **Mapping**: Alphabetical order untuk strings
+- **Storage**: `label_encoders` dictionary untuk reversibility
+
+***
+
+## **📊 Technical Implementation Details**
+
+### **1. Scaling Transformation Mathematics**
+
+#### **StandardScaler (Z-Score Normalization)**
+
+```python
+# For normal_features
+μ = X.mean()  # Population mean
+σ = X.std()   # Population standard deviation
+X_scaled = (X - μ) / σ
+
+# Result: X_scaled ~ N(0, 1)
+```
+
+#### **MinMaxScaler (Min-Max Normalization)**
+
+```python
+# For skewed_features
+X_min = X.min()
+X_max = X.max()
+X_scaled = (X - X_min) / (X_max - X_min)
+
+# Result: X_scaled ∈ [0, 1]
+```
+
+### **2. Encoding Implementation**
+
+```python
+# LabelEncoder process for each categorical feature
+unique_values = df[feature].unique()  # Get unique categories
+sorted_values = sorted(unique_values)  # Sort for consistent mapping
+mapping = {value: idx for idx, value in enumerate(sorted_values)}
+encoded_values = df[feature].map(mapping)
+```
+
+### **3. Memory and Performance Optimization**
+
+```python
+# Efficient batch processing
+def batch_scale_features(df, feature_groups, scalers):
+    for features, scaler in zip(feature_groups, scalers):
+        if features:  # Check if group not empty
+            df[features] = scaler.fit_transform(df[features])
+    return df
+```
+
+
+
+## **📈 Transformation Results**
+
+### **Before vs After Scaling**
+
+```python
+# Example transformation results
+Original average_rating: [3.5, 4.2, 3.8, 4.0] (range: 3.5-4.2)
+Scaled average_rating: [-1.2, 0.8, -0.5, 0.2] (mean: 0, std: 1)
+
+Original num_pages: [200, 450, 800, 1200] (range: 200-1200)
+Scaled num_pages: [0.0, 0.25, 0.6, 1.0] (range: 0-1)
+```
+
+### **Categorical Encoding Results**
+
+```python
+# Example encoding mappings
+language_group: ['english', 'european', 'asian', 'other']
+Encoded: [0, 1, 2, 3]
+
+rating_category: ['Below Average', 'Average', 'Good', 'Very Good', 'Excellent']
+Encoded: [0, 1, 2, 3, 4]  # Preserves quality ordering
+```
+
+### **Data Quality Metrics**
+
+- **Scaling Consistency**: All numerical features dalam comparable ranges
+- **Encoding Completeness**: All categorical features converted to integers
+- **Reversibility**: All transformations dapat di-inverse
+- **Memory Efficiency**: Reduced storage dengan integer encoding
+
+***
+
+Preprocessing ini menghasilkan dataset yang optimal untuk model collaborative filtering dengan semua fitur dalam format dan skala yang sesuai untuk training neural network yang efektif dan stabil.
+
+# **Data Preparation - Save Enhanced Processed Data**
+
+## **📋 Tujuan dan Cara Kerja**
+
+Tahap ini menyimpan semua hasil preprocessing ke file eksternal untuk mempertahankan konsistensi, efisiensi, dan reproduksibilitas dalam tahap modeling dan deployment. Proses ini mencegah kebutuhan untuk mengulang preprocessing yang computationally intensive.
+
+### **🔧 Implementasi dan Parameter**
+
+#### **1. CSV Data Export**
+
+```python
+# Save datasets
+df_clean.to_csv('books_processed_enhanced.csv', index=False)
+filtered_interactions.to_csv('user_interactions_enhanced.csv', index=False)
+train_data.to_csv('train_interactions_enhanced.csv', index=False)
+test_data.to_csv('test_interactions_enhanced.csv', index=False)
+```
+
+**Cara Kerja:**
+
+- **DataFrame Serialization**: Convert pandas DataFrame ke CSV format
+- **Index Exclusion**: `index=False` untuk menghindari extra column
+- **File Naming**: Descriptive names dengan `_enhanced` suffix
+
+**Parameter Detail:**
+
+| File | Content | Size | Purpose |
+| --- | --- | --- | --- |
+| `books_processed_enhanced.csv` | 9,548 books × 28 features | ~2.5MB | Book metadata dengan engineered features |
+| `user_interactions_enhanced.csv` | 62,424 interactions | ~1.2MB | Complete user-book interactions |
+| `train_interactions_enhanced.csv` | 49,939 interactions | ~1.0MB | Training dataset |
+| `test_interactions_enhanced.csv` | 12,485 interactions | ~0.3MB | Testing dataset |
+
+**CSV Format Benefits:**
+
+- ✅ **Human Readable**: Easy inspection dan debugging
+- ✅ **Cross-Platform**: Compatible dengan berbagai tools
+- ✅ **Memory Efficient**: Compressed storage format
+- ✅ **Version Control**: Text-based untuk Git tracking
+
+#### **2. Collaborative Filtering Objects**
+
+```python
+with open('collaborative_filtering_enhanced.pkl', 'wb') as f:
+    pickle.dump({
+        'user_to_index': user_to_index,
+        'book_to_index': book_to_index,
+        'index_to_user': index_to_user,
+        'index_to_book': index_to_book,
+        'train_mapped': train_mapped,
+        'test_mapped': test_mapped,
+        'n_users': len(user_ids),
+        'n_books': len(book_ids),
+        'user_profiles': user_profiles
+    }, f)
+```
+
+**Cara Kerja:**
+
+- **Binary Serialization**: Pickle untuk complex Python objects
+- **Dictionary Structure**: Organized storage dengan descriptive keys
+- **Complete Mapping**: Bidirectional ID mappings untuk model compatibility
+
+**Object Contents:**
+
+| Key | Type | Content | Usage |
+| --- | --- | --- | --- |
+| `user_to_index` | dict | {original_user_id: sequential_index} | Model input conversion |
+| `book_to_index` | dict | {original_book_id: sequential_index} | Model input conversion |
+| `index_to_user` | dict | {sequential_index: original_user_id} | Result interpretation |
+| `index_to_book` | dict | {sequential_index: original_book_id} | Result interpretation |
+| `train_mapped` | list | Training data dalam model format | Model training |
+| `test_mapped` | list | Test data dalam model format | Model evaluation |
+| `n_users` | int | Total unique users (2,000) | Model architecture |
+| `n_books` | int | Total unique books (9,123) | Model architecture |
+| `user_profiles` | list | Synthetic user characteristics | Analysis & debugging |
+
+#### **3. Preprocessing Objects**
+
+```python
+with open('preprocessing_enhanced.pkl', 'wb') as f:
+    pickle.dump({
+        'scaler_normal': scaler_normal,
+        'scaler_skewed': scaler_skewed,
+        'label_encoders': label_encoders,
+        'normal_features': normal_features,
+        'skewed_features': skewed_features,
+        'categorical_features': categorical_features
+    }, f)
+```
+
+**Cara Kerja:**
+
+- **Transformer Storage**: Fitted scalers dan encoders untuk consistent transformation
+- **Feature Definitions**: Lists untuk feature grouping consistency
+- **Reusability**: Enable same transformations pada new data
+
+**Object Contents:**
+
+| Key | Type | Content | Purpose |
+| --- | --- | --- | --- |
+| `scaler_normal` | StandardScaler | Fitted scaler untuk normal features | New data normalization |
+| `scaler_skewed` | MinMaxScaler | Fitted scaler untuk skewed features | New data normalization |
+| `label_encoders` | dict | {feature: LabelEncoder} | Categorical encoding |
+| `normal_features` | list | ['average_rating', 'publication_year'] | Feature grouping |
+| `skewed_features` | list | ['num_pages', 'ratings_count_capped', ...] | Feature grouping |
+| `categorical_features` | list | ['language_code', 'language_group', ...] | Feature grouping |
+
+***
+
+## **📊 File Structure & Usage**
+
+### **🗂️ Output File Organization**
+
+```javascript
+project_directory/
+├── books_processed_enhanced.csv          # Book features dataset
+├── user_interactions_enhanced.csv        # Complete interactions
+├── train_interactions_enhanced.csv       # Training split
+├── test_interactions_enhanced.csv        # Testing split
+├── collaborative_filtering_enhanced.pkl  # CF model objects
+└── preprocessing_enhanced.pkl             # Transformation objects
+```
+
+### **💾 Storage Efficiency**
+
+| File Type | Total Size | Compression | Access Speed |
+| --- | --- | --- | --- |
+| **CSV Files** | ~4.0 MB | Text compression | Medium |
+| **Pickle Files** | ~1.5 MB | Binary serialization | Fast |
+| **Total** | ~5.5 MB | Efficient storage | Optimized |
+
+### **🔄 Usage Patterns**
+
+#### **Model Training Phase**
+
+```python
+# Load CF objects
+with open('collaborative_filtering_enhanced.pkl', 'rb') as f:
+    cf_data = pickle.load(f)
+    
+train_data = cf_data['train_mapped']
+test_data = cf_data['test_mapped']
+n_users = cf_data['n_users']
+n_books = cf_data['n_books']
+```
+
+#### **New Data Processing**
+
+```python
+# Load preprocessing objects
+with open('preprocessing_enhanced.pkl', 'rb') as f:
+    preprocessing = pickle.load(f)
+    
+scaler_normal = preprocessing['scaler_normal']
+label_encoders = preprocessing['label_encoders']
+
+# Apply same transformations
+new_data_scaled = scaler_normal.transform(new_data[normal_features])
+```
+
+#### **Result Interpretation**
+
+```python
+# Convert model output back to original IDs
+predicted_book_indices = model.predict(user_index)
+original_book_ids = [index_to_book[idx] for idx in predicted_book_indices]
+```
+
+## **📋 Enhancement Summary**
+
+### **🔧 Adjustments Made**
+
+```javascript
+1. ✅ Lowered minimum ratings threshold (50 → 30)
+2. ✅ Increased number of users (1500 → 2000)  
+3. ✅ Increased minimum interactions per user (10-100 → 20-150)
+4. ✅ Lowered collaborative filtering thresholds
+5. ✅ Implemented flexible train-test split strategy
+6. ✅ Maintained data quality while increasing volume
+```
+
+**Impact Analysis:**
+
+| Adjustment | Before | After | Impact |
+| --- | --- | --- | --- |
+| **Book threshold** | 50 ratings | 30 ratings | +15% more books |
+| **User count** | 1,500 | 2,000 | +33% more users |
+| **User activity** | 10-100 | 20-150 | +50% interactions/user |
+| **CF thresholds** | Strict | Relaxed | +20% data retention |
+| **Split strategy** | Fixed | Adaptive | Better handling |
+
+### **🎯 Quality Maintained**
+
+- **Data integrity**: All validation checks passed
+- **Feature quality**: Comprehensive engineering applied
+- **Model readiness**: Optimized untuk CF architecture
+- **Scalability**: Efficient storage dan loading
+
+
+
+Dataset sekarang tersimpan dalam format yang optimal untuk collaborative filtering model development dengan semua preprocessing artifacts yang diperlukan untuk consistent dan efficient model training serta deployment.

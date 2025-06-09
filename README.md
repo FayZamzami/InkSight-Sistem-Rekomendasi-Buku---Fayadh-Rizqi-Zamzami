@@ -603,9 +603,11 @@ match_rate = len(successful_matches) / len(all_book) * 100
 
 ***
 
-# 🧹 Data Preparation - Missing Values Handling
+## Data Preparation 
 
-## Tujuan
+### Missing Values Handling
+
+**Tujuan**
 
 Mengidentifikasi dan menangani **missing values** yang muncul setelah proses data merging untuk memastikan kualitas data yang optimal untuk model training.
 

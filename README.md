@@ -1189,3 +1189,617 @@ Y_val = y[split:]        # Targets: rows 977,313 to end
 | **Y_val** | (172,467,) | Validation targets [normalized ratings 0-1] |
 
 ***
+
+# 🧠 Model Architecture - Collaborative Filtering with Neural Embeddings
+
+## Tujuan
+
+Mengimplementasikan **custom neural collaborative filtering model** yang menggunakan **matrix factorization** dengan **bias terms** untuk memprediksi rating buku berdasarkan preferensi user dan karakteristik buku.
+
+**1. Struktur Kelas Model**
+
+```python
+class RecommenderBook(tf.keras.Model):
+```
+
+**Fungsi**
+
+- **Inheritance**: Mewarisi dari `tf.keras.Model` untuk mendapatkan semua fitur training Keras
+- **Custom Architecture**: Memungkinkan implementasi collaborative filtering yang disesuaikan
+
+***
+
+**2. Constructor (init)**
+
+```python
+def __init__(self, num_users, num_books, embedding_size, **kwargs):
+    super(RecommenderBook, self).__init__(**kwargs)
+    self.num_users = num_users
+    self.num_books = num_books
+    self.embedding_size = embedding_size
+```
+
+**Parameter Input**
+
+| Parameter | Fungsi | Contoh Nilai |
+| --- | --- | --- |
+| `num_users` | Jumlah user unik dalam dataset | 105,283 |
+| `num_books` | Jumlah buku unik dalam dataset | 340,556 |
+| `embedding_size` | Dimensi vektor embedding | 50-200 |
+
+***
+
+**3. Layer Embedding untuk User**
+
+```python
+self.user_embedding = tf.keras.layers.Embedding(
+    num_users,
+    embedding_size,
+    embeddings_initializer="he_normal",
+    embeddings_regularizer=tf.keras.regularizers.l2(0.00001)
+)
+self.user_bias = tf.keras.layers.Embedding(num_users, 1)
+```
+
+**A. User Embedding**
+
+**Fungsi**: Mengkonversi user ID menjadi vektor dense yang merepresentasikan preferensi user
+
+**Parameter:**
+
+- **`num_users`**: Vocabulary size (jumlah user unik)
+- **`embedding_size`**: Output dimension (dimensi vektor user)
+- **`embeddings_initializer="he_normal"`**:
+- Inisialisasi bobot dengan distribusi normal He
+- Cocok untuk aktivasi ReLU dan turunannya
+- Formula: `std = sqrt(2/fan_in)`
+- **`embeddings_regularizer=tf.keras.regularizers.l2(0.00001)`**:
+- L2 regularization untuk mencegah overfitting
+- Penalty coefficient: 1e-5
+- Menambahkan `0.00001 * sum(weights²)` ke loss function
+
+**B. User Bias**
+
+**Fungsi**: Menangkap kecenderungan individual user (apakah cenderung memberi rating tinggi/rendah)
+
+**Output Shape**: `(num_users, 1)` - satu nilai bias per user
+
+***
+
+**4. Layer Embedding untuk Book**
+
+```python
+self.book_embedding = tf.keras.layers.Embedding(
+    num_books,
+    embedding_size,
+    embeddings_initializer="he_normal",
+    embeddings_regularizer=tf.keras.regularizers.l2(0.00001)
+)
+self.book_bias = tf.keras.layers.Embedding(num_books, 1)
+```
+
+**A. Book Embedding**
+
+**Fungsi**: Mengkonversi book ID menjadi vektor yang merepresentasikan karakteristik buku
+
+**Parameter**: Sama dengan user embedding, namun dengan `num_books` sebagai vocabulary size
+
+**B. Book Bias**
+
+**Fungsi**: Menangkap kualitas inherent buku (apakah buku tersebut secara umum disukai atau tidak)
+
+***
+
+**5. Forward Pass (call method)**
+
+```python
+def call(self, inputs):
+    user_vector = self.user_embedding(inputs[:,0])
+    user_bias = self.user_bias(inputs[:, 0])
+    book_vector = self.book_embedding(inputs[:, 1])
+    book_bias = self.book_bias(inputs[:, 1])
+
+    dot_user_book = tf.tensordot(user_vector, book_vector, 2)
+
+    x = dot_user_book + user_bias + book_bias
+    
+    return tf.nn.sigmoid(x)
+```
+
+**Cara Kerja Step-by-Step**
+
+**A. Input Parsing**
+
+```python
+# Input shape: (batch_size, 2)
+# inputs[:,0] = user_encoded_ids
+# inputs[:,1] = book_encoded_ids
+```
+
+**B. Embedding Lookup**
+
+```python
+user_vector = self.user_embedding(inputs[:,0])  # Shape: (batch_size, embedding_size)
+book_vector = self.book_embedding(inputs[:,1])  # Shape: (batch_size, embedding_size)
+user_bias = self.user_bias(inputs[:,0])         # Shape: (batch_size, 1)
+book_bias = self.book_bias(inputs[:,1])         # Shape: (batch_size, 1)
+```
+
+**C. Dot Product (Similarity)**
+
+```python
+dot_user_book = tf.tensordot(user_vector, book_vector, 2)
+```
+
+- **Fungsi**: Menghitung similarity antara user dan book vectors
+- **Parameter `2`**: Melakukan dot product pada 2 dimensi terakhir
+- **Output**: Scalar similarity score per sample
+
+**D. Bias Addition**
+
+```python
+x = dot_user_book + user_bias + book_bias
+```
+
+- **Menambahkan bias terms** untuk personalisasi lebih detail
+- **Formula**: `rating = similarity + user_tendency + book_quality`
+
+**E. Activation Function**
+
+```python
+return tf.nn.sigmoid(x)
+```
+
+- **Sigmoid**: Mengkonversi output ke range (0,1)
+- **Sesuai dengan normalized rating** yang sudah dibuat sebelumnya
+
+Model ini mengimplementasikan **Matrix Factorization** dengan **bias terms** menggunakan neural embeddings, yang memungkinkan pembelajaran representasi latent yang kaya untuk user dan book, serta dapat menangkap preferensi individual dan kualitas inherent item.
+
+# ⚙️ Model Configuration - Initialization & Compilation
+
+## Tujuan
+
+Melakukan **inisialisasi model** dan **konfigurasi training parameters** yang optimal untuk collaborative filtering dengan neural embeddings.
+
+## 1. Model Initialization
+
+```python
+model = RecommenderBook(num_users, num_books, 50)
+```
+
+### Parameter Configuration
+
+| Parameter | Value | Source | Purpose |
+| --- | --- | --- | --- |
+| **`num_users`** | 105,283 | `len(user_encoded)` | User embedding vocabulary size |
+| **`num_books`** | 340,556 | `len(isbn_encoded)` | Book embedding vocabulary size |
+| **`embedding_size`** | 50 | Manual selection | Latent factor dimensions |
+
+### Embedding Size Selection Analysis
+
+#### Why 50 Dimensions?
+
+| Factor | Consideration | Impact |
+| --- | --- | --- |
+| **Model Capacity** | Balance between under/overfitting | ✅ Optimal learning capacity |
+| **Computational Efficiency** | Training speed vs accuracy | ✅ Fast training |
+| **Memory Usage** | RAM requirements | ✅ Manageable memory footprint |
+| **Empirical Evidence** | Industry best practices | ✅ Proven effective range |
+
+#### Alternative Embedding Sizes (Not Used)
+
+| Size | Pros | Cons | Decision |
+| --- | --- | --- | --- |
+| **32** | Faster training, less memory | May underfit complex patterns | ❌ Too small for large dataset |
+| **100** | More expressive power | Slower training, more memory | ❌ Unnecessary complexity |
+| **200** | Maximum expressiveness | High overfitting risk | ❌ Computationally expensive |
+| **50** | Balanced performance | Good compromise | ✅ **Selected** |
+
+### Memory & Parameter Estimation
+
+```python
+# Parameter calculation:
+user_embedding_params = num_users * embedding_size      # 105,283 × 50 = 5,264,150
+user_bias_params = num_users * 1                        # 105,283 × 1  = 105,283
+book_embedding_params = num_books * embedding_size      # 340,556 × 50 = 17,027,800  
+book_bias_params = num_books * 1                        # 340,556 × 1  = 340,556
+
+total_parameters = 5,264,150 + 105,283 + 17,027,800 + 340,556 = 22,737,789
+```
+
+| Component | Parameters | Percentage |
+| --- | --- | --- |
+| **User Embeddings** | 5,264,150 | 23.2% |
+| **Book Embeddings** | 17,027,800 | 74.9% |
+| **User Bias** | 105,283 | 0.5% |
+| **Book Bias** | 340,556 | 1.5% |
+| **Total** | **22,737,789** | **100%** |
+
+***
+
+## 2. Model Compilation
+
+```python
+model.compile(
+    loss = tf.keras.losses.BinaryCrossentropy(),
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4),
+    metrics=[tf.keras.metrics.RootMeanSquaredError()]
+)
+```
+
+### A. Loss Function: BinaryCrossentropy
+
+```python
+loss = tf.keras.losses.BinaryCrossentropy()
+```
+
+#### Function Analysis
+
+| Aspect | Description | Value |
+| --- | --- | --- |
+| **Formula** | `-[y×log(ŷ) + (1-y)×log(1-ŷ)]` | Cross-entropy for binary-like problems |
+| **Input Range** | y, ŷ ∈ [0,1] | Matches normalized ratings |
+| **Output Range** | [0, ∞) | Lower is better |
+
+#### Why BinaryCrossentropy for Ratings?
+
+| Justification | Explanation | Benefit |
+| --- | --- | --- |
+| **Normalized Target** | Ratings scaled to [0,1] | ✅ Perfect match with BCE |
+| **Sigmoid Output** | Model outputs [0,1] | ✅ Compatible ranges |
+| **Smooth Gradients** | Differentiable everywhere | ✅ Stable training |
+| **Probabilistic Interpretation** | Can view as preference probability | ✅ Meaningful semantics |
+
+#### Mathematical Example
+
+```python
+# Example calculation:
+actual_rating = 0.7    # Normalized rating
+predicted_rating = 0.6 # Model output
+
+bce = -(0.7 * log(0.6) + 0.3 * log(0.4))
+bce = -(0.7 * (-0.511) + 0.3 * (-0.916))
+bce = -(-0.358 + (-0.275)) = 0.633
+```
+
+### B. Optimizer: Adam
+
+```python
+optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+```
+
+#### Adam Algorithm Components
+
+| Component | Formula | Purpose |
+| --- | --- | --- |
+| **Momentum** | `m_t = β₁m_{t-1} + (1-β₁)g_t` | Smooth gradient updates |
+| **RMSprop** | `v_t = β₂v_{t-1} + (1-β₂)g_t²` | Adaptive learning rates |
+| **Bias Correction** | `m̂_t = m_t/(1-β₁ᵗ)` | Unbiased estimates |
+| **Parameter Update** | `θ_t = θ_{t-1} - α×m̂_t/√v̂_t` | Final weight update |
+
+#### Default Parameters
+
+| Parameter | Default Value | Function |
+| --- | --- | --- |
+| **`learning_rate`** | 1e-4 | Step size for updates |
+| **`beta_1`** | 0.9 | Momentum decay rate |
+| **`beta_2`** | 0.999 | RMSprop decay rate |
+| **`epsilon`** | 1e-7 | Numerical stability |
+
+#### Learning Rate Selection: 1e-4
+
+| Factor | Consideration | Rationale |
+| --- | --- | --- |
+| **Dataset Size** | 1M+ samples | Conservative rate for stability |
+| **Model Complexity** | 22M parameters | Avoid overshooting optima |
+| **Embedding Training** | Large embedding layers | Gentle updates for convergence |
+| **Empirical Evidence** | Proven effective | Industry standard for CF |
+
+### C. Metrics: RootMeanSquaredError
+
+```python
+metrics=[tf.keras.metrics.RootMeanSquaredError()]
+```
+
+#### RMSE Analysis
+
+| Aspect | Description | Benefit |
+| --- | --- | --- |
+| **Formula** | `√(Σ(y-ŷ)²/n)` | Penalizes large errors |
+| **Unit** | Same as target | Interpretable results |
+| **Range** | [0, ∞) | Lower is better |
+| **Sensitivity** | High for outliers | Robust error measurement |
+
+#### RMSE Interpretation for Ratings
+
+```python
+# Example interpretation:
+rmse = 0.15  # On normalized scale [0,1]
+
+# Convert to original scale [0,10]:
+original_rmse = rmse * (10 - 0) = 1.5
+
+# Interpretation: Average error of ±1.5 rating points
+```
+
+***
+
+**1. Inisialisasi Model**
+
+```python
+model = RecommenderBook(num_users, num_books, 50)
+```
+
+**Fungsi**
+
+Membuat instance dari kelas `RecommenderBook` dengan parameter yang telah ditentukan.
+
+**Parameter yang Digunakan**
+
+| Parameter | Nilai | Penjelasan |
+| --- | --- | --- |
+| `num_users` | 105,283 | Jumlah user unik dalam dataset |
+| `num_books` | 340,556 | Jumlah buku unik dalam dataset |
+| `embedding_size` | 50 | Dimensi vektor embedding |
+
+**Mengapa Embedding Size = 50?**
+
+- **Keseimbangan**: Tidak terlalu kecil (underfitting) atau besar (overfitting)
+- **Computational Efficiency**: Ukuran yang reasonable untuk training
+- **Memory Usage**: Total parameters ≈ (105,283 + 340,556) × 50 = ~22M parameters
+- **Empirical Sweet Spot**: Umumnya 50-200 memberikan hasil optimal
+
+Konfigurasi ini mengoptimalkan model untuk **collaborative filtering** dengan pendekatan yang **conservative** namun **effective**, menggunakan **BinaryCrossentropy** untuk training yang stabil dan **RMSE** untuk evaluasi yang interpretable.
+
+# 🚀 Model Training - Collaborative Filtering Training Process
+
+## Tujuan
+
+Melakukan **training model** collaborative filtering dengan data yang telah dipersiapkan menggunakan **supervised learning approach** untuk mempelajari pola preferensi user-book.
+
+## Training Configuration
+
+```python
+history = model.fit(
+    X_train, Y_train, 
+    validation_data=(X_val, Y_val), 
+    batch_size=64, 
+    epochs=25
+)
+```
+
+## Parameter Analysis
+
+### 1. **Training Data**
+
+| Parameter | Value | Shape | Content |
+| --- | --- | --- | --- |
+| **`X_train`** | Training features | (977,313, 2) | [user_encoded, book_encoded] |
+| **`Y_train`** | Training targets | (977,313,) | Normalized ratings [0-1] |
+
+#### Data Flow Example
+
+```python
+# Sample training batch:
+X_train[0:3] = [[0, 0], [1, 1], [2, 2]]  # [user_id, book_id] pairs
+Y_train[0:3] = [0.0, 0.5, 0.8]           # Corresponding normalized ratings
+```
+
+### 2. **Validation Data**
+
+```python
+validation_data=(X_val, Y_val)
+```
+
+| Parameter | Value | Shape | Purpose |
+| --- | --- | --- | --- |
+| **`X_val`** | Validation features | (172,467, 2) | Performance monitoring |
+| **`Y_val`** | Validation targets | (172,467,) | Overfitting detection |
+
+#### Validation Benefits
+
+- **Performance Monitoring**: Track generalization during training
+- **Early Stopping**: Detect when to stop training
+- **Hyperparameter Tuning**: Compare different configurations
+- **Overfitting Detection**: Monitor train-val gap
+
+### 3. **Batch Size: 64**
+
+```python
+batch_size=64
+```
+
+#### Batch Size Analysis
+
+| Aspect | Impact | Reasoning |
+| --- | --- | --- |
+| **Memory Usage** | Moderate | 64 × 2 × 4 bytes = 512 bytes per batch |
+| **Gradient Stability** | Good | Sufficient samples for stable gradients |
+| **Training Speed** | Balanced | Not too small (slow) or large (memory) |
+| **Convergence** | Stable | Good balance of speed vs stability |
+
+# 📊 Training Visualization - RMSE Performance Analysis
+
+## Tujuan
+
+Memvisualisasikan **performa training model** melalui grafik RMSE untuk menganalisis konvergensi, deteksi overfitting, dan evaluasi kualitas pembelajaran model.
+
+## Code Implementation
+
+```python
+plt.plot(history.history["root_mean_squared_error"])
+plt.plot(history.history["val_root_mean_squared_error"])
+plt.title("RMSE metrics plot")
+plt.xlabel("Epochs")
+plt.ylabel("RMSE")
+plt.legend(["train","test"])
+plt.savefig("evaluation.png", dpi=75)
+plt.show()
+```
+
+## Parameter Analysis
+
+### 1. **Data Plotting**
+
+| Code | Parameter | Function | Data Source |
+| --- | --- | --- | --- |
+| `plt.plot(history.history["root_mean_squared_error"])` | Training RMSE array | Plot training curve | Model training history |
+| `plt.plot(history.history["val_root_mean_squared_error"])` | Validation RMSE array | Plot validation curve | Model validation history |
+
+#### Data Structure
+
+```python
+# history.history structure:
+{
+    "root_mean_squared_error": [0.40, 0.38, 0.36, ..., 0.325],      # 25 values
+    "val_root_mean_squared_error": [0.395, 0.375, 0.355, ..., 0.340] # 25 values
+}
+```
+
+### 2. **Plot Configuration**
+
+| Function | Parameter | Value | Purpose |
+| --- | --- | --- | --- |
+| `plt.title()` | String | "RMSE metrics plot" | Graph title |
+| `plt.xlabel()` | String | "Epochs" | X-axis label |
+| `plt.ylabel()` | String | "RMSE" | Y-axis label |
+| `plt.legend()` | List | ["train","test"] | Line identification |
+
+### 3. **Output Configuration**
+
+| Function | Parameter | Value | Purpose |
+| --- | --- | --- | --- |
+| `plt.savefig()` | filename | "evaluation.png" | Save graph as file |
+| `plt.savefig()` | dpi | 75 | Image resolution |
+| `plt.show()` | None | - | Display graph |
+
+#### DPI Selection Analysis
+
+| DPI Value | Quality | File Size | Use Case |
+| --- | --- | --- | --- |
+| **75** | Standard | Small (~50KB) | Quick visualization |
+| 150 | High | Medium (~200KB) | Presentation quality |
+| 300 | Print | Large (~800KB) | Publication ready |
+
+***
+
+## Output Analysis
+
+### Visual Interpretation
+
+#### **Training Curve (Blue Line)**
+
+| Epoch Range | RMSE Value | Behavior | Analysis |
+| --- | --- | --- | --- |
+| **0-5** | 0.40 → 0.35 | Rapid decrease | Fast initial learning |
+| **5-15** | 0.35 → 0.33 | Steady decline | Consistent improvement |
+| **15-25** | 0.33 → 0.325 | Gradual improvement | Fine-tuning phase |
+
+#### **Validation Curve (Orange Line)**
+
+| Epoch Range | RMSE Value | Behavior | Analysis |
+| --- | --- | --- | --- |
+| **0-5** | 0.395 → 0.355 | Quick improvement | Good generalization |
+| **5-15** | 0.355 → 0.345 | Stable decline | Healthy learning |
+| **15-25** | 0.345 → 0.340 | Plateau | Convergence reached |
+
+***
+
+## Performance Metrics Conversion
+
+### RMSE Scale Conversion
+
+```python
+# Convert normalized RMSE to original rating scale:
+final_train_rmse = 0.325  # From graph
+final_val_rmse = 0.340    # From graph
+
+# Original scale [0-10]:
+original_train_rmse = final_train_rmse * 10 = 3.25
+original_val_rmse = final_val_rmse * 10 = 3.40
+```
+
+### Performance Summary Table
+
+| Metric | Initial | Final | Improvement | Original Scale |
+| --- | --- | --- | --- | --- |
+| **Training RMSE** | 0.40 | 0.325 | 18.75% | ±3.25 points |
+| **Validation RMSE** | 0.395 | 0.340 | 13.92% | ±3.40 points |
+| **Train-Val Gap** | 0.005 | 0.015 | +200% | ±0.15 points |
+
+***
+
+**Fungsi Setiap Baris**
+
+| Kode | Fungsi |
+| --- | --- |
+| `plt.plot(history.history["root_mean_squared_error"])` | Plot RMSE training |
+| `plt.plot(history.history["val_root_mean_squared_error"])` | Plot RMSE validation |
+| `plt.title("RMSE metrics plot")` | Judul grafik |
+| `plt.xlabel("Epochs")` | Label sumbu X |
+| `plt.ylabel("RMSE")` | Label sumbu Y |
+| `plt.legend(["train","test"])` | Legenda biru=train, orange=test |
+| `plt.savefig("evaluation.png", dpi=75)` | Simpan gambar |
+| `plt.show()` | Tampilkan grafik |
+
+***
+
+**Analisis Output Grafik**
+
+**A. Karakteristik Kurva Training (Biru)**
+
+**Pola:**
+
+- **Epoch 0-5**: Penurunan cepat dari ~0.40 ke ~0.35
+- **Epoch 5-15**: Penurunan bertahap dari ~0.35 ke ~0.33
+- **Epoch 15-25**: Penurunan lambat dari ~0.33 ke ~0.325
+
+**Interpretasi:**
+
+- **Fast Learning Phase**: Model cepat belajar pola dasar
+- **Fine-tuning Phase**: Optimisasi detail
+- **Convergence Phase**: Mendekati optimal point
+
+**B. Karakteristik Kurva Validation (Orange)**
+
+**Pola:**
+
+- **Epoch 0-5**: Penurunan dari ~0.375 ke ~0.355
+- **Epoch 5-15**: Penurunan bertahap ke ~0.345
+- **Epoch 15-25**: Relatif stabil di ~0.340
+
+**Interpretasi:**
+
+- **Good Generalization**: Validation loss mengikuti training loss
+- **No Overfitting**: Tidak ada divergence yang signifikan
+
+***
+
+**Evaluasi Performa Model**
+
+**A. RMSE Values Analysis**
+
+| Metric | Initial | Final | Improvement |
+| --- | --- | --- | --- |
+| **Training RMSE** | ~0.40 | ~0.325 | 18.75% |
+| **Validation RMSE** | ~0.375 | ~0.340 | 9.33% |
+
+**B. Konversi ke Skala Rating Asli**
+
+```python
+# RMSE dalam skala normalized [0,1]
+final_train_rmse = 0.325
+final_val_rmse = 0.340
+
+# Konversi ke skala asli [0,10]
+original_scale_train = final_train_rmse * 10 = 3.25
+original_scale_val = final_val_rmse * 10 = 3.40
+```
+
+**Interpretasi**:
+
+- Model memiliki **rata-rata error ±3.25** pada training set
+- Model memiliki **rata-rata error ±3.40** pada validation set
+
+***
+Model menunjukkan **learning behavior yang sehat** dengan **potensi improvement** melalui hyperparameter tuning atau architectural changes. Cocok untuk **proof-of-concept** dan dapat digunakan untuk **basic recommendation system**.

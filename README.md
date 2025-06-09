@@ -1174,9 +1174,11 @@ Y_val = y[split:]        # Targets: rows 977,313 to end
 
 ***
 
-# 🧠 Model Architecture - Collaborative Filtering with Neural Embeddings
+## Modelling
 
-## Tujuan
+### 🧠 Model Architecture - Collaborative Filtering with Neural Embeddings
+
+**Tujuan**
 
 Mengimplementasikan **custom neural collaborative filtering model** yang menggunakan **matrix factorization** dengan **bias terms** untuk memprediksi rating buku berdasarkan preferensi user dan karakteristik buku.
 
@@ -1345,13 +1347,13 @@ Model ini mengimplementasikan **Matrix Factorization** dengan **bias terms** men
 
 Melakukan **inisialisasi model** dan **konfigurasi training parameters** yang optimal untuk collaborative filtering dengan neural embeddings.
 
-## 1. Model Initialization
+#### 1. Model Initialization
 
 ```python
 model = RecommenderBook(num_users, num_books, 50)
 ```
 
-### Parameter Configuration
+##### Parameter Configuration
 
 | Parameter | Value | Source | Purpose |
 | --- | --- | --- | --- |
@@ -1359,9 +1361,9 @@ model = RecommenderBook(num_users, num_books, 50)
 | **`num_books`** | 340,556 | `len(isbn_encoded)` | Book embedding vocabulary size |
 | **`embedding_size`** | 50 | Manual selection | Latent factor dimensions |
 
-### Embedding Size Selection Analysis
+##### Embedding Size Selection Analysis
 
-#### Why 50 Dimensions?
+###### Why 50 Dimensions?
 
 | Factor | Consideration | Impact |
 | --- | --- | --- |
@@ -1370,7 +1372,7 @@ model = RecommenderBook(num_users, num_books, 50)
 | **Memory Usage** | RAM requirements | ✅ Manageable memory footprint |
 | **Empirical Evidence** | Industry best practices | ✅ Proven effective range |
 
-#### Alternative Embedding Sizes (Not Used)
+###### Alternative Embedding Sizes (Not Used)
 
 | Size | Pros | Cons | Decision |
 | --- | --- | --- | --- |
@@ -1379,7 +1381,7 @@ model = RecommenderBook(num_users, num_books, 50)
 | **200** | Maximum expressiveness | High overfitting risk | ❌ Computationally expensive |
 | **50** | Balanced performance | Good compromise | ✅ **Selected** |
 
-### Memory & Parameter Estimation
+##### Memory & Parameter Estimation
 
 ```python
 # Parameter calculation:
@@ -1401,7 +1403,7 @@ total_parameters = 5,264,150 + 105,283 + 17,027,800 + 340,556 = 22,737,789
 
 ***
 
-## 2. Model Compilation
+#### 2. Model Compilation
 
 ```python
 model.compile(
@@ -1411,13 +1413,13 @@ model.compile(
 )
 ```
 
-### A. Loss Function: BinaryCrossentropy
+##### A. Loss Function: BinaryCrossentropy
 
 ```python
 loss = tf.keras.losses.BinaryCrossentropy()
 ```
 
-#### Function Analysis
+###### Function Analysis
 
 | Aspect | Description | Value |
 | --- | --- | --- |
@@ -1425,7 +1427,7 @@ loss = tf.keras.losses.BinaryCrossentropy()
 | **Input Range** | y, ŷ ∈ [0,1] | Matches normalized ratings |
 | **Output Range** | [0, ∞) | Lower is better |
 
-#### Why BinaryCrossentropy for Ratings?
+###### Why BinaryCrossentropy for Ratings?
 
 | Justification | Explanation | Benefit |
 | --- | --- | --- |
@@ -1434,7 +1436,7 @@ loss = tf.keras.losses.BinaryCrossentropy()
 | **Smooth Gradients** | Differentiable everywhere | ✅ Stable training |
 | **Probabilistic Interpretation** | Can view as preference probability | ✅ Meaningful semantics |
 
-#### Mathematical Example
+###### Mathematical Example
 
 ```python
 # Example calculation:
@@ -1446,13 +1448,13 @@ bce = -(0.7 * (-0.511) + 0.3 * (-0.916))
 bce = -(-0.358 + (-0.275)) = 0.633
 ```
 
-### B. Optimizer: Adam
+##### B. Optimizer: Adam
 
 ```python
 optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 ```
 
-#### Adam Algorithm Components
+###### Adam Algorithm Components
 
 | Component | Formula | Purpose |
 | --- | --- | --- |
@@ -1461,7 +1463,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 | **Bias Correction** | `m̂_t = m_t/(1-β₁ᵗ)` | Unbiased estimates |
 | **Parameter Update** | `θ_t = θ_{t-1} - α×m̂_t/√v̂_t` | Final weight update |
 
-#### Default Parameters
+###### Default Parameters
 
 | Parameter | Default Value | Function |
 | --- | --- | --- |
@@ -1470,7 +1472,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 | **`beta_2`** | 0.999 | RMSprop decay rate |
 | **`epsilon`** | 1e-7 | Numerical stability |
 
-#### Learning Rate Selection: 1e-4
+###### Learning Rate Selection: 1e-4
 
 | Factor | Consideration | Rationale |
 | --- | --- | --- |
@@ -1479,13 +1481,13 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 | **Embedding Training** | Large embedding layers | Gentle updates for convergence |
 | **Empirical Evidence** | Proven effective | Industry standard for CF |
 
-### C. Metrics: RootMeanSquaredError
+##### C. Metrics: RootMeanSquaredError
 
 ```python
 metrics=[tf.keras.metrics.RootMeanSquaredError()]
 ```
 
-#### RMSE Analysis
+###### RMSE Analysis
 
 | Aspect | Description | Benefit |
 | --- | --- | --- |
@@ -1494,7 +1496,7 @@ metrics=[tf.keras.metrics.RootMeanSquaredError()]
 | **Range** | [0, ∞) | Lower is better |
 | **Sensitivity** | High for outliers | Robust error measurement |
 
-#### RMSE Interpretation for Ratings
+###### RMSE Interpretation for Ratings
 
 ```python
 # Example interpretation:
@@ -1535,13 +1537,13 @@ Membuat instance dari kelas `RecommenderBook` dengan parameter yang telah ditent
 
 Konfigurasi ini mengoptimalkan model untuk **collaborative filtering** dengan pendekatan yang **conservative** namun **effective**, menggunakan **BinaryCrossentropy** untuk training yang stabil dan **RMSE** untuk evaluasi yang interpretable.
 
-# 🚀 Model Training - Collaborative Filtering Training Process
+### 🚀 Model Training - Collaborative Filtering Training Process
 
-## Tujuan
+**Tujuan**
 
 Melakukan **training model** collaborative filtering dengan data yang telah dipersiapkan menggunakan **supervised learning approach** untuk mempelajari pola preferensi user-book.
 
-## Training Configuration
+**Training Configuration**
 
 ```python
 history = model.fit(
@@ -1552,16 +1554,16 @@ history = model.fit(
 )
 ```
 
-## Parameter Analysis
+#### Parameter Analysis
 
-### 1. **Training Data**
+1. **Training Data**
 
 | Parameter | Value | Shape | Content |
 | --- | --- | --- | --- |
 | **`X_train`** | Training features | (977,313, 2) | [user_encoded, book_encoded] |
 | **`Y_train`** | Training targets | (977,313,) | Normalized ratings [0-1] |
 
-#### Data Flow Example
+**Data Flow Example**
 
 ```python
 # Sample training batch:
@@ -1569,7 +1571,7 @@ X_train[0:3] = [[0, 0], [1, 1], [2, 2]]  # [user_id, book_id] pairs
 Y_train[0:3] = [0.0, 0.5, 0.8]           # Corresponding normalized ratings
 ```
 
-### 2. **Validation Data**
+2. **Validation Data**
 
 ```python
 validation_data=(X_val, Y_val)
@@ -1580,20 +1582,20 @@ validation_data=(X_val, Y_val)
 | **`X_val`** | Validation features | (172,467, 2) | Performance monitoring |
 | **`Y_val`** | Validation targets | (172,467,) | Overfitting detection |
 
-#### Validation Benefits
+**Validation Benefits**
 
 - **Performance Monitoring**: Track generalization during training
 - **Early Stopping**: Detect when to stop training
 - **Hyperparameter Tuning**: Compare different configurations
 - **Overfitting Detection**: Monitor train-val gap
 
-### 3. **Batch Size: 64**
+3. **Batch Size: 64**
 
 ```python
 batch_size=64
 ```
 
-#### Batch Size Analysis
+**Batch Size Analysis**
 
 | Aspect | Impact | Reasoning |
 | --- | --- | --- |
@@ -1602,13 +1604,13 @@ batch_size=64
 | **Training Speed** | Balanced | Not too small (slow) or large (memory) |
 | **Convergence** | Stable | Good balance of speed vs stability |
 
-# 📊 Training Visualization - RMSE Performance Analysis
+### 📊 Training Visualization - RMSE Performance Analysis
 
-## Tujuan
+**Tujuan**
 
 Memvisualisasikan **performa training model** melalui grafik RMSE untuk menganalisis konvergensi, deteksi overfitting, dan evaluasi kualitas pembelajaran model.
 
-## Code Implementation
+####Code Implementation
 
 ```python
 plt.plot(history.history["root_mean_squared_error"])
@@ -1621,16 +1623,16 @@ plt.savefig("evaluation.png", dpi=75)
 plt.show()
 ```
 
-## Parameter Analysis
+### Parameter Analysis
 
-### 1. **Data Plotting**
+1. **Data Plotting**
 
 | Code | Parameter | Function | Data Source |
 | --- | --- | --- | --- |
 | `plt.plot(history.history["root_mean_squared_error"])` | Training RMSE array | Plot training curve | Model training history |
 | `plt.plot(history.history["val_root_mean_squared_error"])` | Validation RMSE array | Plot validation curve | Model validation history |
 
-#### Data Structure
+**Data Structure**
 
 ```python
 # history.history structure:
@@ -1640,7 +1642,7 @@ plt.show()
 }
 ```
 
-### 2. **Plot Configuration**
+2. **Plot Configuration**
 
 | Function | Parameter | Value | Purpose |
 | --- | --- | --- | --- |
@@ -1649,7 +1651,7 @@ plt.show()
 | `plt.ylabel()` | String | "RMSE" | Y-axis label |
 | `plt.legend()` | List | ["train","test"] | Line identification |
 
-### 3. **Output Configuration**
+3. **Output Configuration**
 
 | Function | Parameter | Value | Purpose |
 | --- | --- | --- | --- |
@@ -1657,7 +1659,7 @@ plt.show()
 | `plt.savefig()` | dpi | 75 | Image resolution |
 | `plt.show()` | None | - | Display graph |
 
-#### DPI Selection Analysis
+**DPI Selection Analysis**
 
 | DPI Value | Quality | File Size | Use Case |
 | --- | --- | --- | --- |
@@ -1667,11 +1669,11 @@ plt.show()
 
 ***
 
-## Output Analysis
+#### Output Analysis
 
-### Visual Interpretation
+##### Visual Interpretation
 
-#### **Training Curve (Blue Line)**
+**Training Curve (Blue Line)**
 
 | Epoch Range | RMSE Value | Behavior | Analysis |
 | --- | --- | --- | --- |
@@ -1679,7 +1681,7 @@ plt.show()
 | **5-15** | 0.35 → 0.33 | Steady decline | Consistent improvement |
 | **15-25** | 0.33 → 0.325 | Gradual improvement | Fine-tuning phase |
 
-#### **Validation Curve (Orange Line)**
+**Validation Curve (Orange Line)**
 
 | Epoch Range | RMSE Value | Behavior | Analysis |
 | --- | --- | --- | --- |
@@ -1689,9 +1691,9 @@ plt.show()
 
 ***
 
-## Performance Metrics Conversion
+#### Performance Metrics Conversion
 
-### RMSE Scale Conversion
+##### RMSE Scale Conversion
 
 ```python
 # Convert normalized RMSE to original rating scale:
@@ -1703,7 +1705,7 @@ original_train_rmse = final_train_rmse * 10 = 3.25
 original_val_rmse = final_val_rmse * 10 = 3.40
 ```
 
-### Performance Summary Table
+##### Performance Summary Table
 
 | Metric | Initial | Final | Improvement | Original Scale |
 | --- | --- | --- | --- | --- |
@@ -1786,7 +1788,7 @@ original_scale_val = final_val_rmse * 10 = 3.40
 - Model memiliki **rata-rata error ±3.40** pada validation set
 
 ***
-# Hasil 
+### Hasil 
 
 
 
@@ -2158,7 +2160,7 @@ Top 10 Recommendations:
 Sistem berhasil menghasilkan rekomendasi yang **relevan** dan **berkualitas**, meskipun ada **room for improvement** dalam hal personalisasi yang lebih detail. Model menunjukkan kemampuan untuk menangkap pola preferensi dan menghasilkan rekomendasi yang **meaningful** untuk user.
 
 ***
-# Evaluation
+## Evaluation
 
 Penjelasan Kode: Generasi Rekomendasi dan Output
 
@@ -2349,11 +2351,11 @@ Top 10 Recommendations:
 
 Sistem berhasil menghasilkan rekomendasi yang **relevan** dan **berkualitas**, meskipun ada **room for improvement** dalam hal personalisasi yang lebih detail. Model menunjukkan kemampuan untuk menangkap pola preferensi dan menghasilkan rekomendasi yang **meaningful** untuk user.
 
-# Penjelasan Evaluasi Model Collaborative Filtering
+### Penjelasan Evaluasi Model Collaborative Filtering
 
-## 1. Fungsi dan Tujuan Evaluasi
+#### 1. Fungsi dan Tujuan Evaluasi
 
-### **Tujuan Utama Evaluasi:**
+##### **Tujuan Utama Evaluasi:**
 
 Evaluasi model bertujuan untuk mengukur seberapa baik sistem rekomendasi Collaborative Filtering dapat **menjawab problem statement** yang telah dirumuskan:
 
@@ -2361,7 +2363,7 @@ Evaluasi model bertujuan untuk mengukur seberapa baik sistem rekomendasi Collabo
 
 2. **Mengembangkan sistem rekomendasi yang akurat**: Evaluasi memvalidasi kemampuan model dalam memprediksi preferensi pengguna berdasarkan data rating historis.
 
-### **Fungsi Evaluasi:**
+##### **Fungsi Evaluasi:**
 
 - **Validasi Performa**: Memastikan model dapat memprediksi rating dengan akurat
 - **Deteksi Overfitting**: Mengidentifikasi apakah model terlalu spesifik pada data training
@@ -2370,15 +2372,15 @@ Evaluasi model bertujuan untuk mengukur seberapa baik sistem rekomendasi Collabo
 
 ***
 
-## 2. Cara Kerja Sistem Evaluasi
+#### 2. Cara Kerja Sistem Evaluasi
 
-### **Alur Kerja Evaluasi:**
+##### **Alur Kerja Evaluasi:**
 
 ```javascript
 Data Test (X_val, Y_val) → Prediksi Model → Denormalisasi → Perhitungan Metrik → Interpretasi
 ```
 
-### **Proses Detail:**
+##### **Proses Detail:**
 
 1. **Persiapan Data Test**:
 
@@ -2407,9 +2409,9 @@ Data Test (X_val, Y_val) → Prediksi Model → Denormalisasi → Perhitungan Me
 
 ***
 
-## 3. Parameter dan Metrik yang Digunakan
+#### 3. Parameter dan Metrik yang Digunakan
 
-### **A. Parameter Normalisasi:**
+##### **A. Parameter Normalisasi:**
 
 | Parameter | Nilai | Fungsi |
 | --- | --- | --- |
@@ -2423,9 +2425,9 @@ Data Test (X_val, Y_val) → Prediksi Model → Denormalisasi → Perhitungan Me
 - Membantu konvergensi training yang lebih stabil
 - Memungkinkan penggunaan sigmoid activation function
 
-### **B. Metrik Evaluasi Utama:**
+##### **B. Metrik Evaluasi Utama:**
 
-#### **1. Root Mean Squared Error (RMSE)**
+###### **1. Root Mean Squared Error (RMSE)**
 
 ```python
 rmse = √(Σ(y_true - y_pred)²/n)
@@ -2436,7 +2438,7 @@ rmse = √(Σ(y_true - y_pred)²/n)
 - **Skala**: Sama dengan skala rating asli (0-10)
 - **Keunggulan**: Sensitif terhadap outlier, cocok untuk deteksi prediksi yang sangat meleset
 
-#### **2. Mean Absolute Error (MAE)**
+###### **2. Mean Absolute Error (MAE)**
 
 ```python
 mae = Σ|y_true - y_pred|/n
@@ -2447,7 +2449,7 @@ mae = Σ|y_true - y_pred|/n
 - **Keunggulan**: Lebih robust terhadap outlier dibanding RMSE
 - **Konteks Bisnis**: Menunjukkan rata-rata kesalahan prediksi rating dalam poin
 
-#### **3. R² Score (Coefficient of Determination)**
+###### **3. R² Score (Coefficient of Determination)**
 
 ```python
 r2 = 1 - (SS_res / SS_tot)
@@ -2461,7 +2463,7 @@ r2 = 1 - (SS_res / SS_tot)
 - 0.7-0.8: Good
 - <0.7: Perlu perbaikan
 
-#### **4. Mean Absolute Percentage Error (MAPE)**
+###### **4. Mean Absolute Percentage Error (MAPE)**
 
 ```python
 mape = (100/n) × Σ|((y_true - y_pred)/y_true)|
@@ -2471,9 +2473,9 @@ mape = (100/n) × Σ|((y_true - y_pred)/y_true)|
 - **Keunggulan**: Scale-independent, mudah diinterpretasi bisnis
 - **Interpretasi**: Persentase rata-rata kesalahan prediksi
 
-### **C. Metrik Akurasi Toleransi:**
+##### **C. Metrik Akurasi Toleransi:**
 
-#### **Akurasi ±1 Poin**
+###### **Akurasi ±1 Poin**
 
 ```python
 accuracy_1 = (jumlah_prediksi_dalam_toleransi_1_poin / total_prediksi) × 100%
@@ -2482,7 +2484,7 @@ accuracy_1 = (jumlah_prediksi_dalam_toleransi_1_poin / total_prediksi) × 100%
 - **Fungsi**: Mengukur persentase prediksi yang akurat dalam toleransi ±1 poin rating
 - **Konteks Bisnis**: Menunjukkan seberapa sering sistem memberikan rekomendasi yang "hampir tepat"
 
-#### **Akurasi ±2 Poin**
+###### **Akurasi ±2 Poin**
 
 ```python
 accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
@@ -2493,15 +2495,15 @@ accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
 
 ***
 
-## 4. Analisis Kategori Rating
+#### 4. Analisis Kategori Rating
 
-### **Kategorisasi Rating:**
+##### **Kategorisasi Rating:**
 
 - **Low (0-3)**: Buku yang tidak disukai
 - **Medium (4-6)**: Buku dengan rating sedang
 - **High (7-10)**: Buku yang sangat disukai
 
-### **Fungsi Analisis Kategori:**
+##### **Fungsi Analisis Kategori:**
 
 1. **Identifikasi Bias Model**: Apakah model lebih baik memprediksi kategori tertentu
 2. **Strategi Rekomendasi**: Fokus pada kategori High untuk rekomendasi terbaik
@@ -2509,9 +2511,9 @@ accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
 
 ***
 
-## 5. Menjawab Problem Statement
+#### 5. Menjawab Problem Statement
 
-### **Problem 1: Mempercepat Proses Pencarian Buku**
+##### **Problem 1: Mempercepat Proses Pencarian Buku**
 
 **Solusi melalui Evaluasi:**
 
@@ -2526,7 +2528,7 @@ accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
 3. Memberikan top-10 rekomendasi yang paling relevan
 4. **Hasil**: Pengguna tidak perlu browsing manual, langsung mendapat rekomendasi personal
 
-### **Problem 2: Sistem Rekomendasi Berdasarkan Data Penilaian**
+##### **Problem 2: Sistem Rekomendasi Berdasarkan Data Penilaian**
 
 **Solusi melalui Evaluasi:**
 
@@ -2543,9 +2545,9 @@ accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
 
 ***
 
-## 6. Interpretasi Hasil Evaluasi
+#### 6. Interpretasi Hasil Evaluasi
 
-### **Standar Performa yang Baik:**
+##### **Standar Performa yang Baik:**
 
 | Metrik | Excellent | Good | Fair | Poor |
 | --- | --- | --- | --- | --- |
@@ -2553,13 +2555,13 @@ accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
 | R² | ≥ 0.9 | ≥ 0.7 | ≥ 0.5 | < 0.5 |
 | Akurasi ±2 | ≥ 90% | ≥ 80% | ≥ 70% | < 70% |
 
-### **Konteks Bisnis:**
+##### **Konteks Bisnis:**
 
 - **RMSE 1.5**: Rata-rata kesalahan prediksi 1.5 poin dari rating sebenarnya
 - **Akurasi 80%**: 8 dari 10 rekomendasi memiliki rating yang cukup akurat
 - **R² 0.7**: Model dapat menjelaskan 70% variasi preferensi pengguna
 
-### **Dampak pada Problem Statement:**
+##### **Dampak pada Problem Statement:**
 
 1. **Efisiensi Pencarian**: Model dengan performa baik dapat mengurangi waktu pencarian dari jam menjadi detik
 2. **Akurasi Rekomendasi**: Sistem dapat memprediksi preferensi dengan tingkat kepercayaan tinggi
@@ -2567,9 +2569,9 @@ accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
 
 ***
 
-## 7. Kesimpulan Evaluasi
+#### 7. Kesimpulan Evaluasi
 
-### **Validasi Solusi:**
+##### **Validasi Solusi:**
 
 Sistem evaluasi memvalidasi bahwa model Collaborative Filtering dapat:
 
@@ -2578,17 +2580,17 @@ Sistem evaluasi memvalidasi bahwa model Collaborative Filtering dapat:
 3. ✅ **Personalisasi**: Memberikan rekomendasi yang disesuaikan per pengguna
 4. ✅ **Akurasi tinggi**: Prediksi rating dengan tingkat kesalahan yang dapat diterima
 
-### **Kontribusi terhadap Problem Statement:**
+##### **Kontribusi terhadap Problem Statement:**
 
 - **Efisiensi**: Mengurangi waktu pencarian buku dari manual browsing menjadi rekomendasi otomatis
 - **Akurasi**: Memastikan rekomendasi sesuai dengan preferensi pengguna berdasarkan data historis
 - **Skalabilitas**: Sistem dapat menangani jutaan interaksi user-book untuk memberikan rekomendasi real-time
 
-# Penjelasan Output Evaluasi Model Collaborative Filtering
+### Penjelasan Output Evaluasi Model Collaborative Filtering
 
-## 1. Analisis Output Evaluasi
+#### 1. Analisis Output Evaluasi
 
-### **A. Persiapan Data Test**
+##### **A. Persiapan Data Test**
 
 ```javascript
 ✅ Data test disiapkan dari validation set
@@ -2602,7 +2604,7 @@ Sistem evaluasi memvalidasi bahwa model Collaborative Filtering dapat:
 - **Range 0-1**: Konfirmasi bahwa normalisasi berhasil mengkonversi rating ke skala 0-1
 - **Normalisasi formula**: `(x - 0) / (10 - 0) = x/10` - sederhana karena rating asli sudah 0-10
 
-### **B. Hasil Prediksi Model**
+##### **B. Hasil Prediksi Model**
 
 ```javascript
 ✅ Prediksi selesai!
@@ -2616,7 +2618,7 @@ Sistem evaluasi memvalidasi bahwa model Collaborative Filtering dapat:
 - **Mean prediksi 0.15**: Model cenderung memprediksi rating rendah (setara 1.5/10)
 - **⚠️ Problem**: Model mengalami **underprediction bias** - selalu memprediksi lebih rendah
 
-### **C. Denormalisasi ke Skala Asli**
+##### **C. Denormalisasi ke Skala Asli**
 
 ```javascript
 ✅ Denormalisasi selesai!
@@ -2632,9 +2634,9 @@ Sistem evaluasi memvalidasi bahwa model Collaborative Filtering dapat:
 
 ***
 
-## 2. Analisis Metrik Evaluasi
+#### 2. Analisis Metrik Evaluasi
 
-### **A. Metrik Utama - Performa Buruk**
+##### **A. Metrik Utama - Performa Buruk**
 
 ```javascript
 RMSE (Skala 0-10): 3.7085 (Poor)
@@ -2644,26 +2646,26 @@ R² Score: 0.0735 (Poor)
 
 **Penjelasan Detail:**
 
-#### **RMSE = 3.71**
+###### **RMSE = 3.71**
 
 - **Interpretasi**: Rata-rata kesalahan prediksi 3.71 poin dari rating sebenarnya
 - **Konteks**: Pada skala 0-10, ini adalah kesalahan 37% - sangat tinggi
 - **Standar industri**: RMSE yang baik untuk sistem rekomendasi biasanya <2.0
 - **⚠️ Masalah**: Model tidak reliable untuk prediksi rating
 
-#### **MAE = 2.72**
+###### **MAE = 2.72**
 
 - **Interpretasi**: Rata-rata absolut kesalahan 2.72 poin
 - **Konteks bisnis**: Jika user sebenarnya rating 8, model prediksi ~5.3
 - **Dampak**: Rekomendasi tidak akurat, user mungkin tidak puas
 
-#### **R² = 0.0735**
+###### **R² = 0.0735**
 
 - **Interpretasi**: Model hanya menjelaskan 7.35% variasi rating
 - **Artinya**: 92.65% variasi tidak dapat dijelaskan model
 - **⚠️ Masalah kritis**: Model hampir tidak berguna untuk prediksi
 
-### **B. MAPE Anomali**
+##### **B. MAPE Anomali**
 
 ```javascript
 MAPE: 6987152963.16%
@@ -2676,7 +2678,7 @@ MAPE: 6987152963.16%
 - **Masalah**: Ketika actual = 0, pembagian menghasilkan infinity
 - **Solusi**: MAPE tidak cocok untuk data dengan nilai 0
 
-### **C. Akurasi Toleransi**
+##### **C. Akurasi Toleransi**
 
 ```javascript
 Akurasi dalam toleransi ±1 poin: 33.81%
@@ -2692,9 +2694,9 @@ Akurasi dalam toleransi ±2 poin: 54.04%
 
 ***
 
-## 3. Analisis Distribusi dan Visualisasi
+#### 3. Analisis Distribusi dan Visualisasi
 
-### **A. Statistik Deskriptif**
+##### **A. Statistik Deskriptif**
 
 ```javascript
        Actual  Predicted
@@ -2706,32 +2708,32 @@ Max   10.0000     8.5624
 
 **Analisis Mendalam:**
 
-#### **Perbedaan Mean (2.87 vs 1.55)**
+###### **Perbedaan Mean (2.87 vs 1.55)**
 
 - **Gap**: 1.32 poin - bias sistematis yang signifikan
 - **Penyebab**: Model terlalu konservatif dalam prediksi
 - **Dampak**: Sistem akan meremehkan preferensi user
 
-#### **Perbedaan Standard Deviation (3.85 vs 1.20)**
+###### **Perbedaan Standard Deviation (3.85 vs 1.20)**
 
 - **Actual**: Variasi tinggi (0-10) - data natural
 - **Predicted**: Variasi rendah (0-1.2) - model tidak confident
 - **⚠️ Problem**: Model tidak dapat menangkap diversitas preferensi
 
-#### **Range Prediction (0-8.56)**
+###### **Range Prediction (0-8.56)**
 
 - **Missing high ratings**: Model tidak pernah prediksi >8.6
 - **Implikasi**: Buku bagus tidak akan direkomendasikan dengan confidence tinggi
 
-### **B. Analisis Visualisasi**
+##### **B. Analisis Visualisasi**
 
-#### **Distribution Plot:**
+###### **Distribution Plot:**
 
 - **Actual**: Distribusi U-shaped (banyak rating 0 dan tinggi)
 - **Predicted**: Distribusi exponential decay (dominasi rating rendah)
 - **⚠️ Masalah**: Model tidak memahami pola preferensi user yang sebenarnya
 
-#### **Box Plot:**
+###### **Box Plot:**
 
 - **Actual**: Median ~7, quartile range luas
 - **Predicted**: Median ~1, range sangat sempit
@@ -2739,9 +2741,9 @@ Max   10.0000     8.5624
 
 ***
 
-## 4. Analisis Per Kategori Rating
+#### 4. Analisis Per Kategori Rating
 
-### **A. Performance Per Kategori**
+##### **A. Performance Per Kategori**
 
 ```javascript
 Low (0-3):   MAE: 1.12, RMSE: 1.44  ✅ Baik
@@ -2756,7 +2758,7 @@ High (7-10):  MAE: 6.14, RMSE: 6.35  ❌ Buruk
 - **Pola**: Semakin tinggi rating actual, semakin buruk prediksi
 - **⚠️ Implikasi**: Sistem tidak dapat mengidentifikasi buku berkualitas tinggi
 
-### **B. Confusion Matrix Analysis**
+##### **B. Confusion Matrix Analysis**
 
 ```javascript
               precision    recall  f1-score   support
@@ -2767,28 +2769,28 @@ High (7-10)     0.91      0.03      0.06     48923
 
 **Analisis Detail:**
 
-#### **Low Category (0-3):**
+###### **Low Category (0-3):**
 
 - **Recall 97%**: Model sangat baik mendeteksi rating rendah
 - **Precision 67%**: 2/3 prediksi "low" benar
 - **Interpretasi**: Model bias memprediksi semua sebagai "low"
 
-#### **High Category (7-10):**
+###### **High Category (7-10):**
 
 - **Recall 3%**: Model hampir tidak pernah deteksi rating tinggi
 - **Precision 91%**: Jika prediksi "high", biasanya benar
 - **⚠️ Problem kritis**: Model gagal mengidentifikasi preferensi tinggi
 
-#### **Overall Accuracy: 63%**
+###### **Overall Accuracy: 63%**
 
 - **Interpretation**: 6 dari 10 kategori prediksi benar
 - **Bias**: Akurasi tinggi karena dominasi prediksi "low"
 
 ***
 
-## 5. Analisis Training Performance
+#### 5. Analisis Training Performance
 
-### **A. Overfitting Detection**
+##### **A. Overfitting Detection**
 
 ```javascript
 Training RMSE: 0.3230
@@ -2805,31 +2807,31 @@ Selisih: 0.0150
 
 ***
 
-## 6. Diagnosis Masalah dan Solusi
+#### 6. Diagnosis Masalah dan Solusi
 
-### **A. Identifikasi Masalah Utama**
+##### **A. Identifikasi Masalah Utama**
 
-#### **1. Underprediction Bias**
+###### **1. Underprediction Bias**
 
 - **Gejala**: Mean predicted (1.55) << Mean actual (2.87)
 - **Penyebab**: Sigmoid activation + loss function combination
 - **Dampak**: Sistem meremehkan semua preferensi
 
-#### **2. Limited Prediction Range**
+###### **2. Limited Prediction Range**
 
 - **Gejala**: Max prediction hanya 8.56/10
 - **Penyebab**: Model tidak confident untuk prediksi tinggi
 - **Dampak**: Buku berkualitas tidak direkomendasikan optimal
 
-#### **3. Poor High-Rating Detection**
+###### **3. Poor High-Rating Detection**
 
 - **Gejala**: Recall 3% untuk kategori High
 - **Penyebab**: Model tidak belajar pattern untuk rating tinggi
 - **Dampak**: Gagal mengidentifikasi buku yang benar-benar disukai
 
-### **B. Rekomendasi Perbaikan**
+##### **B. Rekomendasi Perbaikan**
 
-#### **1. Architecture Improvements**
+###### **1. Architecture Improvements**
 
 ```python
 # Tambahkan layer dan regularization
@@ -2842,7 +2844,7 @@ model = Sequential([
 ])
 ```
 
-#### **2. Loss Function Optimization**
+###### **2. Loss Function Optimization**
 
 ```python
 # Ganti dari BinaryCrossentropy ke MSE
@@ -2853,7 +2855,7 @@ model.compile(
 )
 ```
 
-#### **3. Data Balancing**
+###### **3. Data Balancing**
 
 ```python
 # Balance dataset per kategori rating
@@ -2863,9 +2865,9 @@ class_weights = compute_class_weight('balanced', ...)
 
 ***
 
-## 7. Menjawab Problem Statement (Revisi)
+#### 7. Menjawab Problem Statement (Revisi)
 
-### **Problem 1: Mempercepat Proses Pencarian Buku**
+##### **Problem 1: Mempercepat Proses Pencarian Buku**
 
 **Status Saat Ini: ❌ BELUM TERCAPAI**
 
@@ -2881,7 +2883,7 @@ class_weights = compute_class_weight('balanced', ...)
 - Perbaiki bias underprediction
 - Optimasi untuk deteksi rating tinggi
 
-### **Problem 2: Sistem Rekomendasi Berdasarkan Data Penilaian**
+##### **Problem 2: Sistem Rekomendasi Berdasarkan Data Penilaian**
 
 **Status Saat Ini: ❌ BELUM OPTIMAL**
 
@@ -2899,9 +2901,9 @@ class_weights = compute_class_weight('balanced', ...)
 
 ***
 
-## 8. Kesimpulan dan Rekomendasi
+#### 8. Kesimpulan dan Rekomendasi
 
-### **A. Status Evaluasi**
+##### **A. Status Evaluasi**
 
 ```javascript
 🚨 MODEL PERLU PERBAIKAN SIGNIFIKAN
@@ -2910,14 +2912,14 @@ class_weights = compute_class_weight('balanced', ...)
 ❌ Akurasi ±2: 54% (Target: >80%)
 ```
 
-### **B. Prioritas Perbaikan**
+##### **B. Prioritas Perbaikan**
 
 1. **Fix underprediction bias** - Ganti activation function
 2. **Improve architecture** - Tambah complexity dan regularization  
 3. **Balance training data** - Handle class imbalance
 4. **Optimize hyperparameters** - Learning rate, embedding size, epochs
 
-### **C. Expected Improvements**
+##### **C. Expected Improvements**
 
 Dengan perbaikan yang tepat, target performance:
 
@@ -2925,7 +2927,7 @@ Dengan perbaikan yang tepat, target performance:
 - **R²**: 7.35% → >70% (improvement 850%)
 - **Akurasi ±2**: 54% → >80% (improvement 48%)
 
-### **D. Business Impact**
+##### **D. Business Impact**
 
 Setelah perbaikan, sistem akan dapat:
 

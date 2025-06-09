@@ -2123,41 +2123,24 @@ Menampilkan detail buku yang direkomendasikan model
 
 ***
 
-**7. Analisis Output**
+**7. Analisis Output User Profile (User 231210)**
 
-**A. User Profile (User 231210)**
-
-```javascript
-Book with high ratings from user:
-1. The Advocate Adviser (Gay Columnist)
-2. Physicians' Desk Reference 1998
-3. Who's in a Family?
-4. Times Family Atlas of the World
-5. Real Kids, Real Adventures #1
-```
-
-**Analisis Preferensi**:
-
-- **Diverse Interests**: Kesehatan, keluarga, petualangan
-- **Non-fiction Tendency**: Referensi dan panduan
-- **Family-oriented**: Buku tentang keluarga dan anak
-
-**B. Model Recommendations**
+**Model Recommendations**
 
 ```javascript
-Top 10 Recommendations:
-1. Harry Potter Series (4 buku)
-2. Children's Poetry (Shel Silverstein)
-3. Love You Forever
-4. El Hobbit
-5. A Kiss for Little Bear
+0439064864 : Harry Potter and the Chamber of Secrets (Book 2)
+0439136350 : Harry Potter and the Prisoner of Azkaban (Book 3)
+0439139597 : Harry Potter and the Goblet of Fire (Book 4)
+0590353403 : Harry Potter and the Sorcerer's Stone (Book 1)
+0060256672 : Where the Sidewalk Ends : Poems and Drawings
+0060248025 : Falling Up
+0920668372 : Love You Forever
+1844262553 : Free
+8445071416 : El Hobbit
+0064440508 : A Kiss for Little Bear
 ```
 
-**Analisis Rekomendasi**:
 
-- **Genre Shift**: Model merekomendasikan fiksi anak
-- **Pattern Recognition**: Menangkap preferensi family-friendly content
-- **Popular Titles**: Buku-buku dengan rating tinggi secara umum
 
 Sistem berhasil menghasilkan rekomendasi yang **relevan** dan **berkualitas**, meskipun ada **room for improvement** dalam hal personalisasi yang lebih detail. Model menunjukkan kemampuan untuk menangkap pola preferensi dan menghasilkan rekomendasi yang **meaningful** untuk user.
 

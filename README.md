@@ -105,7 +105,7 @@ Berdasarkan analisis yang telah dilakukan, diperoleh hasil sebagai berikut:
 
 # Book Recommendation System - Data Loading & Initial Exploration
 
-## 📊 Data Loading
+### 📊 Data Loading
 
 Tahap pertama dalam pengembangan sistem rekomendasi adalah memuat dataset yang akan digunakan untuk training model.
 
@@ -117,7 +117,7 @@ ratings = pd.read_csv(base_dir+"Ratings.csv")
 users = pd.read_csv(base_dir+"Users.csv")
 ```
 
-### Dataset Overview
+#### Dataset Overview
 
 Project ini menggunakan **Book Recommendation Dataset** yang terdiri dari tiga file utama:
 
@@ -127,9 +127,9 @@ Project ini menggunakan **Book Recommendation Dataset** yang terdiri dari tiga f
 | **Ratings.csv** | Data interaksi user-book dengan rating 0-10 | 1,149,780 rating |
 | **Users.csv** | Profil pengguna (ID, lokasi, usia) | 278,858 users |
 
-### 🔍 Exploratory Data Analysis
+#### 🔍 Exploratory Data Analysis
 
-#### Books Dataset
+##### Books Dataset
 
 ```python
 books.head()
@@ -144,17 +144,17 @@ Dataset books berisi informasi lengkap tentang buku dengan fitur-fitur berikut:
 - **Publisher**: Nama penerbit
 - **Image-URL-S/M/L**: URL gambar cover buku dalam berbagai ukuran
 
-#### Key Insights dari Initial Exploration:
+##### Key Insights dari Initial Exploration:
 
 ***
 
 # 🔧 Data Preprocessing - Column Standardization
 
-## Tujuan Standardisasi Kolom
+### Tujuan Standardisasi Kolom
 
 Tahap preprocessing pertama adalah **standardisasi nama kolom** untuk memastikan konsistensi dalam penamaan dan mempermudah akses data selama pengembangan model.
 
-## Implementasi
+### Implementasi
 
 ```python
 # Standardisasi nama kolom untuk semua dataset
@@ -168,9 +168,9 @@ users.columns = users.columns.str.lower()
 users.columns = users.columns.str.replace("-","_")
 ```
 
-## Cara Kerja & Parameter
+### Cara Kerja & Parameter
 
-### 1. **Konversi ke Huruf Kecil**
+#### 1. **Konversi ke Huruf Kecil**
 
 ```python
 .str.lower()
@@ -180,7 +180,7 @@ users.columns = users.columns.str.replace("-","_")
 | --- | --- | --- |
 | **`.str.lower()`** | Mengkonversi semua huruf menjadi lowercase | `"Book-Title"` → `"book-title"` |
 
-### 2. **Penggantian Karakter**
+#### 2. **Penggantian Karakter**
 
 ```python
 .str.replace("-", "_")
@@ -191,9 +191,9 @@ users.columns = users.columns.str.replace("-","_")
 | **Pattern**: `"-"` | Target karakter yang akan diganti | Tanda hubung |
 | **Replacement**: `"_"` | Karakter pengganti | Underscore |
 
-## Transformasi Kolom
+### Transformasi Kolom
 
-### Before Standardization:
+#### Before Standardization:
 
 ```javascript
 Books: ['ISBN', 'Book-Title', 'Book-Author', 'Year-Of-Publication', 'Publisher']
@@ -201,7 +201,7 @@ Ratings: ['User-ID', 'ISBN', 'Book-Rating']
 Users: ['User-ID', 'Location', 'Age']
 ```
 
-### After Standardization:
+#### After Standardization:
 
 ```javascript
 Books: ['isbn', 'book_title', 'book_author', 'year_of_publication', 'publisher']
@@ -210,25 +210,25 @@ Users: ['user_id', 'location', 'age']
 ```
 
 
-## Verifikasi Hasil
+### Verifikasi Hasil
 
 ```python
 # Menampilkan dataset users setelah standardisasi
 users.head()
 ```
 
-# 📊 Data Quality Analysis - Books Dataframe
+### 📊 Data Quality Analysis - Books Dataframe
 
-## Analisis Struktur Data
+#### Analisis Struktur Data
 
 ```python
 # Melihat informasi detail dataset books
 books.info()
 ```
 
-## Hasil Analisis
+#### Hasil Analisis
 
-### Dataset Overview
+##### Dataset Overview
 
 | Metric | Value |
 | --- | --- |
@@ -252,11 +252,11 @@ books.info()
 
 ***
 
-# 🔍 Data Uniqueness & Integrity Analysis
+### 🔍 Data Uniqueness & Integrity Analysis
 
-## ISBN Uniqueness Verification
+#### ISBN Uniqueness Verification
 
-### Tujuan
+##### Tujuan
 
 Memastikan bahwa setiap ISBN merepresentasikan satu buku unik, yang merupakan prinsip dasar sistem identifikasi buku.
 
@@ -267,14 +267,14 @@ books["isbn"].duplicated().sum()
 
 **Hasil**: `0` - Tidak ada duplikasi ISBN ✅
 
-## Book Uniqueness Analysis
+#### Book Uniqueness Analysis
 
 ```python
 print(f"Banyak data buku yang unik berdasarkan judul : {len(books['book_title'].unique())}")
 print(f"Banyak data buku yang unik berdasarkan ISBN : {len(books['isbn'].unique())}")
 ```
 
-### Hasil Analisis
+##### Hasil Analisis
 
 | Metric | Count | Percentage |
 | --- | --- | --- |
@@ -282,7 +282,7 @@ print(f"Banyak data buku yang unik berdasarkan ISBN : {len(books['isbn'].unique(
 | **Unique Titles** | 242,135 | 89.2% |
 | **Title Duplicates** | 29,225 | 10.8% |
 
-### Key Insights
+##### Key Insights
 
 ✅ **ISBN Integrity**: Setiap ISBN unik - memastikan identifikasi buku yang tepat
 
@@ -296,13 +296,13 @@ print(f"Banyak data buku yang unik berdasarkan ISBN : {len(books['isbn'].unique(
 books[books["book_title"].duplicated()].sample(5, axis=0)
 ```
 
-### Case Study: "El Ladron De Cuerpos"
+##### Case Study: "El Ladron De Cuerpos"
 
 ```python
 books[books["book_title"] == "El Ladron De Cuerpos"]
 ```
 
-### Analisis Temuan
+##### Analisis Temuan
 
 Buku dengan judul sama namun ISBN berbeda menunjukkan:
 
@@ -315,15 +315,15 @@ Buku dengan judul sama namun ISBN berbeda menunjukkan:
 
 ***
 
-## User Dataset Analysis
+#### User Dataset Analysis
 
-### Dataset Overview
+##### Dataset Overview
 
 ```python
 users.head()  # Menampilkan sample data users
 ```
 
-### Uniqueness Check
+##### Uniqueness Check
 
 ```python
 print(f"Banyak data user unik : {len(users['user_id'].unique())}")
@@ -331,7 +331,7 @@ print(f"Banyak data user unik : {len(users['user_id'].unique())}")
 
 **Hasil**: `278,858` user unik ✅
 
-### Data Quality Assessment
+##### Data Quality Assessment
 
 ```python
 users.info()
@@ -343,7 +343,7 @@ users.info()
 | `location` | 278,858 | object | 100% ✅ |
 | `age` | 168,096 | float64 | 60.3% ⚠️ |
 
-### Missing Values Analysis
+##### Missing Values Analysis
 
 | Metric | Value |
 | --- | --- |
@@ -356,9 +356,9 @@ users.info()
 
 # 📈 Ratings Dataset Analysis
 
-## Dataset Overview
+#### Dataset Overview
 
-### Data Structure Exploration
+##### Data Structure Exploration
 
 ```python
 # Menampilkan sample data ratings
@@ -367,7 +367,7 @@ ratings.head()
 
 Dataset ratings berisi **interaksi user-book** yang merupakan core data untuk collaborative filtering.
 
-## Dataset Statistics
+#### Dataset Statistics
 
 ```python
 print(f"Banyak data rating: {len(ratings)}")
@@ -375,7 +375,7 @@ print(f"Jumlah buku yang telah diberi rating: {len(ratings['isbn'].unique())}")
 print(f"Jumlah user yang memberikan rating: {len(ratings['user_id'].unique())}")
 ```
 
-### Key Metrics
+##### Key Metrics
 
 | Metric | Count | Percentage of Total |
 | --- | --- | --- |
@@ -383,7 +383,7 @@ print(f"Jumlah user yang memberikan rating: {len(ratings['user_id'].unique())}")
 | **Unique Books Rated** | 340,556 | 29.6% |
 | **Active Users** | 105,283 | 9.2% |
 
-### Coverage Analysis
+##### Coverage Analysis
 
 | Dataset | Total Items | Rated Items | Coverage |
 | --- | --- | --- | --- |
@@ -392,13 +392,13 @@ print(f"Jumlah user yang memberikan rating: {len(ratings['user_id'].unique())}")
 
 *\*Coverage >100% menunjukkan ada buku dalam ratings yang tidak ada di dataset books*
 
-## Data Quality Assessment
+#### Data Quality Assessment
 
 ```python
 ratings.info()
 ```
 
-### Data Completeness
+##### Data Completeness
 
 | Column | Non-Null Count | Data Type | Completeness |
 | --- | --- | --- | --- |
@@ -406,7 +406,7 @@ ratings.info()
 | `isbn` | 1,149,780 | object | 100% ✅ |
 | `book_rating` | 1,149,780 | int64 | 100% ✅ |
 
-### Quality Indicators
+##### Quality Indicators
 
 - **Perfect Completeness**: Tidak ada missing values
 
@@ -414,13 +414,13 @@ ratings.info()
 
 - **Large Scale**: 1M+ interaksi untuk training yang robust
 
-## Rating Distribution Analysis
+#### Rating Distribution Analysis
 
 ```python
 ratings.describe().round(3)
 ```
 
-### Rating Scale Characteristics
+##### Rating Scale Characteristics
 
 | Statistic | Value |
 | --- | --- |
@@ -429,16 +429,16 @@ ratings.describe().round(3)
 | **Rating Range** | 0-10 (11 point scale) |
 | **Mean Rating** | ~5.0 (estimated) |
 
-### Rating Scale Interpretation
+##### Rating Scale Interpretation
 
 - **0**: Lowest rating (strongly dislike)
 - **5**: Neutral/average rating  
 - **10**: Highest rating (strongly like)
 - **Scale Type**: Integer scale with 11 discrete values
 
-## Data Sparsity Analysis
+#### Data Sparsity Analysis
 
-### Sparsity Calculation
+##### Sparsity Calculation
 
 ```python
 total_possible_interactions = 278,858 * 271,360  # All possible user-book pairs
@@ -456,13 +456,13 @@ Dataset ratings menunjukkan **kualitas tinggi** dengan **completeness 100%** dan
 
 ***
 
-# 🔧 Data Preprocessing - Dataset Overview
+### 🔧 Data Preprocessing - Dataset Overview
 
-## Tujuan
+#### Tujuan
 
 Memberikan **comprehensive overview** dari semua dataset sebelum melakukan penggabungan dan transformasi data untuk model training.
 
-## Implementation
+#### Implementation
 
 ```python
 # Data Preprocessing - Statistical Overview
@@ -472,9 +472,9 @@ print(f"Jumlah seluruh users : {len(users['user_id'].unique())}")
 print(f"Jumlah seluruh rating : {len(ratings)}")
 ```
 
-## Cara Kerja & Parameter
+#### Cara Kerja & Parameter
 
-### 1. **Books Analysis**
+##### 1. **Books Analysis**
 
 | Code | Parameter | Fungsi |
 | --- | --- | --- |
@@ -482,20 +482,20 @@ print(f"Jumlah seluruh rating : {len(ratings)}")
 | `len()` | Array of unique values | Hitung jumlah buku berdasarkan ISBN |
 | `books['book_title'].unique()` | Column: `book_title` | Ekstrak semua judul unik |
 
-### 2. **Users Analysis**
+##### 2. **Users Analysis**
 
 | Code | Parameter | Fungsi |
 | --- | --- | --- |
 | `users['user_id'].unique()` | Column: `user_id` | Ekstrak semua user ID unik |
 | `len()` | Array of unique users | Hitung total pengguna |
 
-### 3. **Ratings Analysis**
+##### 3. **Ratings Analysis**
 
 | Code | Parameter | Fungsi |
 | --- | --- | --- |
 | `len(ratings)` | Entire dataframe | Hitung total interaksi rating |
 
-## Output Analysis
+#### Output Analysis
 
 ```javascript
 Jumlah seluruh data buku berdasarkan ISBN : 271360
@@ -504,7 +504,7 @@ Jumlah seluruh users : 278858
 Jumlah seluruh rating : 1149780
 ```
 
-### Dataset Summary Table
+##### Dataset Summary Table
 
 | Dataset | Metric | Count | Notes |
 | --- | --- | --- | --- |
@@ -513,7 +513,7 @@ Jumlah seluruh rating : 1149780
 | **Users** | Total Users | 278,858 | All registered users |
 | **Ratings** | Total Interactions | 1,149,780 | User-book interactions |
 
-## Statistical Foundation
+#### Statistical Foundation
 
 Hasil overview ini memberikan **baseline metrics** yang penting untuk:
 
@@ -524,43 +524,43 @@ Hasil overview ini memberikan **baseline metrics** yang penting untuk:
 
 ***
 
-# 🔗 Data Integration - Menggabungkan data ratings dengan judul buku
+### 🔗 Data Integration - Menggabungkan data ratings dengan judul buku
 
-## Tujuan
+#### Tujuan
 
 Menggabungkan dataset **ratings** dengan **metadata buku** untuk memperkaya informasi dan mempersiapkan data yang lebih komprehensif untuk model training.
 
-## Implementation
+#### Implementation
 
-### 1. **Inisialisasi Base Dataset**
+##### 1. **Inisialisasi Base Dataset**
 
 ```python
 all_book = ratings
 all_book
 ```
 
-#### Cara Kerja & Parameter
+###### Cara Kerja & Parameter
 
 | Parameter | Fungsi | Output |
 | --- | --- | --- |
 | `ratings` | Source dataset | Copy ratings sebagai base |
 | `all_book` | Target variable | Alias untuk dataset gabungan |
 
-#### Struktur Awal
+###### Struktur Awal
 
 ```javascript
 Shape: (1,149,780 rows × 3 columns)
 Columns: [user_id, isbn, book_rating]
 ```
 
-### 2. **Data Merging Process**
+##### 2. **Data Merging Process**
 
 ```python
 all_book = pd.merge(all_book, books[["isbn","book_title"]], on="isbn", how="left")
 all_book
 ```
 
-#### Parameter Detail
+###### Parameter Detail
 
 | Parameter | Value | Fungsi |
 | --- | --- | --- |
@@ -569,7 +569,7 @@ all_book
 | **Join Key** | `on="isbn"` | Kolom untuk mencocokkan data |
 | **Join Type** | `how="left"` | Left join - pertahankan semua ratings |
 
-#### Subset Selection Logic
+###### Subset Selection Logic
 
 ```python
 books[["isbn","book_title"]]
@@ -579,23 +579,23 @@ books[["isbn","book_title"]]
 - **Memory Optimization**: Mengurangi overhead data yang tidak terpakai
 - **Focus**: Hanya metadata judul yang dibutuhkan untuk rekomendasi
 
-## Data Quality Implications
+#### Data Quality Implications
 
-### 1. **Successful Matches**
+##### 1. **Successful Matches**
 
 ```python
 # Records dengan book_title yang valid
 successful_matches = all_book[all_book['book_title'].notna()]
 ```
 
-### 2. **Missing Matches**
+##### 2. **Missing Matches**
 
 ```python
 # Records dengan book_title = NULL
 missing_matches = all_book[all_book['book_title'].isna()]
 ```
 
-### 3. **Match Rate Calculation**
+##### 3. **Match Rate Calculation**
 
 ```python
 match_rate = len(successful_matches) / len(all_book) * 100
@@ -609,20 +609,20 @@ match_rate = len(successful_matches) / len(all_book) * 100
 
 Mengidentifikasi dan menangani **missing values** yang muncul setelah proses data merging untuk memastikan kualitas data yang optimal untuk model training.
 
-## 1. Missing Values Detection
+#### 1. Missing Values Detection
 
 ```python
 all_book.isna().sum()
 ```
 
-### Cara Kerja & Parameter
+##### Cara Kerja & Parameter
 
 | Method | Fungsi | Output |
 | --- | --- | --- |
 | `.isna()` | Deteksi nilai NULL/NaN per cell | Boolean matrix |
 | `.sum()` | Agregasi missing values per kolom | Count per column |
 
-### Missing Values Analysis
+##### Missing Values Analysis
 
 | Column | Missing Count | Percentage | Impact |
 | --- | --- | --- | --- |
@@ -631,9 +631,9 @@ all_book.isna().sum()
 | `book_rating` | 0 | 0% | ✅ Complete |
 | `book_title` | ~118,644 | ~10.3% | ⚠️ Significant |
 
-## 2. Missing Values Impact Assessment
+#### 2. Missing Values Impact Assessment
 
-### Root Cause Analysis
+##### Root Cause Analysis
 
 ```python
 missing_percentage = (118644 / 1149780) * 100  # ≈ 10.3%
@@ -645,7 +645,7 @@ missing_percentage = (118644 / 1149780) * 100  # ≈ 10.3%
 - **Data Quality**: Incomplete book metadata
 - **Left Join Effect**: NULL values untuk unmatched records
 
-### Business Impact
+##### Business Impact
 
 | Aspect | Impact | Severity |
 | --- | --- | --- |
@@ -653,16 +653,16 @@ missing_percentage = (118644 / 1149780) * 100  # ≈ 10.3%
 | **Model Training** | Reduced training data | Acceptable |
 | **User Experience** | No book titles for some recommendations | Significant |
 
-## 3. Missing Values Handling Strategy
+#### 3. Missing Values Handling Strategy
 
 ```python
 all_book_clean = all_book.dropna()
 all_book_clean
 ```
 
-### Method: Complete Case Deletion
+##### Method: Complete Case Deletion
 
-#### Parameter Analysis
+###### Parameter Analysis
 
 | Parameter | Value | Fungsi |
 | --- | --- | --- |
@@ -673,27 +673,27 @@ all_book_clean
 
 ***
 
-# 📋 Data Preparation - Membuat dataframe baru yang berisi isbn dan judul buku
+## 📋 Data Preparation - Membuat dataframe baru yang berisi isbn dan judul buku
 
-## Tujuan
+### Tujuan
 
 Membuat **lookup table** dan **data structures** yang diperlukan untuk tahap modeling, termasuk mapping antara ISBN dan judul buku untuk keperluan rekomendasi.
 
-## 1. Dataset Preparation Alias
+### 1. Dataset Preparation Alias
 
 ```python
 preparation = all_book_clean
 preparation
 ```
 
-### Cara Kerja & Parameter
+#### Cara Kerja & Parameter
 
 | Parameter | Fungsi | Output |
 | --- | --- | --- |
 | `all_book_clean` | Source dataset (cleaned) | Clean dataset dengan 1,031,136 records |
 | `preparation` | Working alias | Pointer ke dataset untuk modeling prep |
 
-### Tujuan Alias
+#### Tujuan Alias
 
 - **Code Clarity**: Nama yang lebih deskriptif untuk tahap preparation
 - **Data Safety**: Preserve original cleaned dataset
@@ -701,7 +701,7 @@ preparation
 
 ***
 
-## 2. List Extraction for Processing
+### 2. List Extraction for Processing
 
 ```python
 book_title, isbn = preparation["book_title"].tolist(), preparation["isbn"].tolist()
@@ -709,9 +709,9 @@ print(f"Jumlah data judul buku : {len(book_title)}")
 print(f"Jumlah data isbn: {len(isbn)}")
 ```
 
-### Cara Kerja & Parameter
+#### Cara Kerja & Parameter
 
-#### A. Data Extraction
+##### A. Data Extraction
 
 | Method | Parameter | Fungsi | Output Type |
 | --- | --- | --- | --- |
@@ -719,23 +719,23 @@ print(f"Jumlah data isbn: {len(isbn)}")
 | `.tolist()` | None | Convert to Python list | Python list |
 | `preparation["isbn"]` | Column name | Extract ISBN column | pandas Series |
 
-#### B. Multiple Assignment
+##### B. Multiple Assignment
 
 ```python
 # Simultaneous assignment in single line
 book_title, isbn = preparation["book_title"].tolist(), preparation["isbn"].tolist()
 ```
 
-### Expected Output
+#### Expected Output
 
 ```javascript
 Jumlah data judul buku : 1031136
 Jumlah data isbn: 1031136
 ```
 
-## 3. Quality Validation Check
+### 3. Quality Validation Check
 
-### Data Integrity Verification
+#### Data Integrity Verification
 
 ```python
 len(book_title) == len(isbn)  # Should return True
@@ -749,7 +749,7 @@ len(book_title) == len(isbn)  # Should return True
 
 ***
 
-## 4. Lookup Table Creation
+### 4. Lookup Table Creation
 
 ```python
 book_new = pd.DataFrame({
@@ -759,9 +759,9 @@ book_new = pd.DataFrame({
 book_new
 ```
 
-### Cara Kerja & Parameter
+#### Cara Kerja & Parameter
 
-#### A. DataFrame Construction
+##### A. DataFrame Construction
 
 | Parameter | Value | Fungsi |
 | --- | --- | --- |
@@ -769,7 +769,7 @@ book_new
 | **Column 1** | `"isbn"` | Primary key column |
 | **Column 2** | `"title"` | Descriptive value column |
 
-#### B. Data Structure Design
+##### B. Data Structure Design
 
 ```python
 # book_new structure
@@ -779,7 +779,7 @@ book_new
 2  0446520802             Nine Stories
 ```
 
-### Lookup Table Characteristics
+#### Lookup Table Characteristics
 
 | Feature | Description | Benefit |
 | --- | --- | --- |
@@ -790,27 +790,27 @@ book_new
 
 ***
 
-# 🔢 Feature Encoding - Categorical to Numerical Transformation
+### 🔢 Feature Encoding - Categorical to Numerical Transformation
 
-## Tujuan
+**Tujuan**
 
 Mengkonversi **data kategorik** (user_id dan ISBN) menjadi **data numerik** yang dapat diproses oleh model machine learning, khususnya untuk implementasi **collaborative filtering** dengan neural embeddings.
 
-## 1. Dataset Initialization
+#### 1. Dataset Initialization
 
 ```python
 df = ratings
 df
 ```
 
-### Cara Kerja & Parameter
+**Cara Kerja & Parameter**
 
 | Parameter | Fungsi | Output |
 | --- | --- | --- |
 | `ratings` | Source dataset | Original ratings dataset |
 | `df` | Working variable | Copy untuk proses encoding |
 
-### Dataset Structure
+##### Dataset Structure
 
 ```javascript
 Shape: (1,149,780 rows × 3 columns)
@@ -819,40 +819,32 @@ Columns: [user_id, isbn, book_rating]
 
 ***
 
-## 2. Unique Values Extraction
+#### 2. Unique Values Extraction
 
 ```python
 isbn_id = df["isbn"].unique().tolist()
 user_id = df["user_id"].unique().tolist()
 ```
 
-### Cara Kerja & Parameter
+**Cara Kerja & Parameter**
 
 | Method | Parameter | Fungsi | Output |
 | --- | --- | --- | --- |
 | `.unique()` | None | Remove duplicates | Numpy array of unique values |
 | `.tolist()` | None | Convert to Python list | Python list |
 
-### Expected Results
-
-```python
-# Example outputs:
-isbn_id = ["034545104X", "0155061224", "0446520802", ...]  # ~340,556 unique ISBNs
-user_id = [276725, 276726, 276727, ...]                    # ~105,283 unique users
-```
-
 ***
 
-## 3. Encoding Dictionaries Creation
+#### 3. Encoding Dictionaries Creation
 
-### A. ISBN Encoding/Decoding
+##### A. ISBN Encoding/Decoding
 
 ```python
 isbn_encoded = {key:values for values, key in enumerate(isbn_id)}
 isbn_decoded = {key:values for key, values in enumerate(isbn_id)}
 ```
 
-#### Dictionary Comprehension Analysis
+##### Dictionary Comprehension Analysis
 
 | Component | Fungsi | Example |
 | --- | --- | --- |
@@ -860,7 +852,7 @@ isbn_decoded = {key:values for key, values in enumerate(isbn_id)}
 | `{key:values for values, key in ...}` | Swap key-value positions | ISBN → Index mapping |
 | `{key:values for key, values in ...}` | Keep original order | Index → ISBN mapping |
 
-#### Output Structure
+**Output Structure**
 
 ```python
 # isbn_encoded: ISBN → Integer
@@ -880,14 +872,14 @@ isbn_decoded = {
 }
 ```
 
-### B. User Encoding/Decoding
+##### B. User Encoding/Decoding
 
 ```python
 user_encoded = {key:values for values, key in enumerate(user_id)}
 user_decoded = {key:values for key, values in enumerate(user_id)}
 ```
 
-#### Output Structure
+**Output Structure**
 
 ```python
 # user_encoded: User_ID → Integer
@@ -909,7 +901,7 @@ user_decoded = {
 
 ***
 
-## 4. Mapping to DataFrame
+#### 4. Mapping to DataFrame
 
 ```python
 df["user_encoded"] = df["user_id"].map(user_encoded)
@@ -917,7 +909,7 @@ df["isbn_encoded"] = df["isbn"].map(isbn_encoded)
 df
 ```
 
-### Cara Kerja & Parameter
+**Cara Kerja & Parameter**
 
 | Method | Parameter | Fungsi | Output |
 | --- | --- | --- | --- |
@@ -927,9 +919,9 @@ df
 
 ***
 
-## 5. Data Sparsity Analysis
+#### 5. Data Sparsity Analysis
 
-### Sparsity Calculation
+**Sparsity Calculation**
 
 ```python
 total_possible_interactions = num_users * num_books  # 105,283 × 340,556
@@ -946,22 +938,22 @@ sparsity = (1 - actual_interactions/total_possible_interactions) * 100
 
 ***
 
-# 🔄 Data Type Conversion - Rating Column to Float64
+### 🔄 Data Type Conversion - Rating Column to Float64
 
-## Tujuan
+**Tujuan**
 
 Mengkonversi tipe data kolom `book_rating` dari **integer** menjadi **float64** untuk memastikan kompatibilitas optimal dengan model machine learning dan operasi matematika yang diperlukan.
 
-## Implementation
+**Implementation**
 
 ```python
 df["book_rating"] = df["book_rating"].values.astype(np.float64)
 df
 ```
 
-## Cara Kerja & Parameter Detail
+### Cara Kerja & Parameter Detail
 
-### 1. **Ekstraksi Numpy Array**
+#### 1. **Ekstraksi Numpy Array**
 
 ```python
 df["book_rating"].values
@@ -972,7 +964,7 @@ df["book_rating"].values
 | `df["book_rating"]` | Access pandas Series | Pandas Series dengan metadata |
 | `.values` | Extract underlying array | Numpy array tanpa metadata |
 
-### 2. **Type Conversion**
+#### 2. **Type Conversion**
 
 ```python
 .astype(np.float64)
@@ -994,7 +986,7 @@ df["book_rating"].values
 [0.0, 5.0, 0.0, 3.0, 6.0] (dtype: float64)
 ```
 
-### 3. **Column Assignment**
+#### 3. **Column Assignment**
 
 ```python
 df["book_rating"] = ...
@@ -1007,9 +999,9 @@ df["book_rating"] = ...
 | **Value Preservation** | Keep same values | No data loss |
 
 ***
-## Why Float64 Conversion?
+### Why Float64 Conversion?
 
-### ✅ **Machine Learning Compatibility**
+#### ✅ **Machine Learning Compatibility**
 
 | Aspect | Integer | Float64 | Benefit |
 | --- | --- | --- | --- |
@@ -1018,7 +1010,7 @@ df["book_rating"] = ...
 | **Normalization** | May cause issues | Smooth operations | ✅ Seamless processing |
 | **Gradient Computation** | Potential problems | Optimal | ✅ Stable training |
 
-### ✅ **Numerical Operations**
+#### ✅ **Numerical Operations**
 
 1. **Division Operations**
 
@@ -1047,20 +1039,20 @@ df["book_rating"] = ...
 
 ***
 
-# 🎯 Data Preparation Final Stage - Train/Validation Split
+### 🎯 Data Preparation Final Stage - Train/Validation Split
 
-## Tujuan
+**Tujuan**
 
 Melakukan **persiapan akhir data** sebelum model training dengan shuffling, normalisasi, dan pembagian dataset untuk training dan validation yang optimal.
 
-## 1. Data Shuffling
+#### 1. Data Shuffling
 
 ```python
 df = df.sample(frac=1, random_state=99)
 df
 ```
 
-### Cara Kerja & Parameter
+**Cara Kerja & Parameter**
 
 | Parameter | Value | Fungsi |
 | --- | --- | --- |
@@ -1068,7 +1060,7 @@ df
 | **`random_state`** | 99 | Seed untuk reproducibility |
 | **Return** | Shuffled DataFrame | Dataset dengan urutan acak |
 
-### Shuffling Benefits
+**Shuffling Benefits**
 
 | Benefit | Explanation | Impact |
 | --- | --- | --- |
@@ -1077,42 +1069,22 @@ df
 | **Overfitting Prevention** | Mencegah model belajar urutan | ✅ Better generalization |
 | **Reproducibility** | Hasil konsisten dengan seed | ✅ Experiment repeatability |
 
-### Before vs After Shuffling
-
-#### Before (Original Order)
-
-```python
-# Might have patterns like:
-# - All ratings from user A first
-# - Books grouped by genre
-# - Temporal ordering bias
-```
-
-#### After (Random Order)
-
-```python
-# Random distribution:
-# - Mixed users throughout dataset
-# - Random book-user combinations
-# - No systematic patterns
-```
-
 ***
 
-## 2. Feature Matrix Preparation
+#### 2. Feature Matrix Preparation
 
 ```python
 x = df[["user_encoded","isbn_encoded"]]
 ```
 
-### Feature Selection
+**Feature Selection**
 
 | Column | Data Type | Range | Purpose |
 | --- | --- | --- | --- |
 | **`user_encoded`** | int64 | 0 to 105,282 | User identification |
 | **`isbn_encoded`** | int64 | 0 to 340,555 | Book identification |
 
-### Output Structure
+**Output Structure**
 
 ```python
 # x shape: (1,149,780, 2)
@@ -1125,7 +1097,7 @@ x = df[["user_encoded","isbn_encoded"]]
 
 ***
 
-## 3. Target Normalization (Min-Max Scaling)
+#### 3. Target Normalization (Min-Max Scaling)
 
 ```python
 min = df["book_rating"].min()
@@ -1133,7 +1105,7 @@ max = df["book_rating"].max()
 y = df["book_rating"].apply(lambda x:(x-min) / (max-min))
 ```
 
-### Normalization Parameters
+**Normalization Parameters**
 
 | Parameter | Value | Calculation |
 | --- | --- | --- |
@@ -1141,7 +1113,7 @@ y = df["book_rating"].apply(lambda x:(x-min) / (max-min))
 | **`max`** | 10.0 | Maximum rating in dataset |
 | **Range** | 10.0 | max - min |
 
-### Min-Max Formula Implementation
+**Min-Max Formula Implementation**
 
 ```python
 # Lambda function breakdown:
@@ -1154,7 +1126,7 @@ def normalize_rating(rating):
 
 ***
 
-## 4. Train-Validation Split
+#### 4. Train-Validation Split
 
 ```python
 split = int(0.85 * df.shape[0])
@@ -1166,7 +1138,7 @@ X_train, X_val, Y_train, Y_val = (
 )
 ```
 
-### Split Calculation
+**Split Calculation**
 
 | Metric | Calculation | Result |
 | --- | --- | --- |
@@ -1175,23 +1147,23 @@ X_train, X_val, Y_train, Y_val = (
 | **Training %** | 85% | 977,313 samples |
 | **Validation %** | 15% | 172,467 samples |
 
-### Data Split Implementation
+#### Data Split Implementation
 
-#### A. **Training Set (85%)**
+##### A. **Training Set (85%)**
 
 ```python
 X_train = x[:split]      # Features: rows 0 to 977,312
 Y_train = y[:split]      # Targets: rows 0 to 977,312
 ```
 
-#### B. **Validation Set (15%)**
+##### B. **Validation Set (15%)**
 
 ```python
 X_val = x[split:]        # Features: rows 977,313 to end
 Y_val = y[split:]        # Targets: rows 977,313 to end
 ```
 
-### Final Dataset Shapes
+#### Final Dataset Shapes
 
 | Dataset | Shape | Content |
 | --- | --- | --- |

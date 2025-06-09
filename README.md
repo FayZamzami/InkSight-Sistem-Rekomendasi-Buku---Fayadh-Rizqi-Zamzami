@@ -1802,4 +1802,1152 @@ original_scale_val = final_val_rmse * 10 = 3.40
 - Model memiliki **rata-rata error ±3.40** pada validation set
 
 ***
-Model menunjukkan **learning behavior yang sehat** dengan **potensi improvement** melalui hyperparameter tuning atau architectural changes. Cocok untuk **proof-of-concept** dan dapat digunakan untuk **basic recommendation system**.
+# Hasil 
+
+
+
+**1. Inisialisasi Data**
+
+```python
+book_df = book_new
+df = pd.read_csv("/content/Ratings.csv")
+```
+
+**Fungsi**
+
+- **`book_df`**: Alias untuk dataframe buku (berisi mapping ISBN ↔ title)
+- **`df`**: Load ulang dataset ratings asli dengan kolom nama original
+
+**Mengapa Load Ulang?**
+
+- Dataset asli memiliki kolom `"User-ID"` dan `"ISBN"` (dengan huruf kapital)
+- Diperlukan untuk mencari user dan buku yang belum dibaca
+
+***
+
+**2. Pemilihan User Random**
+
+```python
+user_id = df["User-ID"].sample(1).iloc[0]
+```
+
+**Cara Kerja**
+
+- **`.sample(1)`**: Mengambil 1 user secara random dari dataset
+- **`.iloc[0]`**: Ekstrak nilai user_id dari pandas Series
+
+**3. Identifikasi Buku yang Sudah Dibaca**
+
+```python
+readed_book_by_user = df[df["User-ID"] == user_id]
+```
+
+**Fungsi**
+
+Mengfilter semua rating yang pernah diberikan oleh user terpilih
+
+**Informasi yang Diperoleh**
+
+- **Daftar buku** yang sudah pernah dibaca user
+- **Rating** yang diberikan untuk setiap buku
+- **Preferensi historis** user
+
+***
+
+**4. Identifikasi Buku yang Belum Dibaca**
+
+```python
+book_not_readed = book_df[~book_df["isbn"].isin(readed_book_by_user["ISBN"].values)]["isbn"]
+```
+
+**Cara Kerja**
+
+**A. Ekstraksi ISBN yang Sudah Dibaca**
+
+```python
+readed_book_by_user["ISBN"].values
+# Output: array(['034545104X', '0155061224', '0446520802', ...])
+```
+
+**B. Filter dengan Negasi (~)**
+
+```python
+~book_df["isbn"].isin(...)
+# Mengambil buku yang TIDAK ada dalam daftar yang sudah dibaca
+```
+
+**C. Hasil**
+
+```python
+# book_not_readed berisi ISBN buku yang belum pernah dibaca user
+```
+
+***
+
+**5. Filtering Buku yang Valid untuk Prediksi**
+
+```python
+book_not_readed = list(
+    set(book_not_readed).intersection(set(isbn_encoded.keys()))
+)
+```
+
+**Fungsi**
+
+Memastikan hanya buku yang ada dalam **encoding dictionary** yang digunakan
+
+**Cara Kerja**
+
+- **`set(book_not_readed)`**: Convert ke set untuk operasi intersection
+- **`set(isbn_encoded.keys())`**: Set semua ISBN yang ada dalam model
+- **`.intersection()`**: Ambil irisan (buku yang ada di kedua set)
+
+**Mengapa Perlu Filtering?**
+
+- **Model Limitation**: Model hanya bisa prediksi untuk ISBN yang ada dalam training
+- **Data Consistency**: Menghindari error saat encoding
+- **Valid Predictions**: Memastikan semua prediksi valid
+
+***
+
+**6. Encoding User ID**
+
+```python
+user_encoder = user_encoded.get(user_id)
+```
+
+**Fungsi**
+
+Mengkonversi `user_id` asli menjadi **encoded index** yang dipahami model
+
+**Contoh**
+
+```python
+# Jika user_id = 276725
+user_encoder = user_encoded.get(276725)  # Output: 0
+```
+
+***
+
+**7. Persiapan Input Array untuk Model**
+
+```python
+book_not_readed = [[isbn_encoded.get(x)] for x in book_not_readed]
+user_book_array = np.hstack(
+    ([[user_encoder]] * len(book_not_readed), book_not_readed)
+)
+```
+
+**A. Encoding ISBN**
+
+```python
+book_not_readed = [[isbn_encoded.get(x)] for x in book_not_readed]
+```
+
+**Fungsi**: Mengkonversi setiap ISBN menjadi encoded index dalam format list
+
+**Contoh Transformasi**:
+
+```python
+# Before: ['034545104X', '0155061224', ...]
+# After: [[0], [1], [2], ...]
+```
+
+**B. Pembuatan Input Array**
+
+```python
+user_book_array = np.hstack(
+    ([[user_encoder]] * len(book_not_readed), book_not_readed)
+)
+```
+
+**Cara Kerja**:
+
+**Step 1**: Replikasi User Encoder
+
+```python
+[[user_encoder]] * len(book_not_readed)
+# Jika user_encoder = 0 dan ada 1000 buku:
+# [[0], [0], [0], ..., [0]]  # 1000 kali
+```
+
+**Step 2**: Horizontal Stack
+
+```python
+# Gabungkan user_id dengan setiap book_id
+user_array = [[0], [0], [0], ...]     # User column
+book_array = [[0], [1], [2], ...]     # Book column
+
+# Result:
+user_book_array = [[0, 0], [0, 1], [0, 2], ...]
+```
+
+***
+
+Penjelasan Kode: Generasi Rekomendasi dan Output
+
+**1. Prediksi Rating dengan Model**
+
+```python
+ratings = model.predict(user_book_array).flatten()
+```
+
+**Cara Kerja**
+
+- **`model.predict()`**: Menjalankan forward pass model untuk semua kombinasi user-book
+- **Input**: `user_book_array` dengan shape `(n_books, 2)` → `[user_encoded, book_encoded]`
+- **`.flatten()`**: Mengkonversi output 2D menjadi 1D array
+
+**Parameter dan Fungsi**
+
+| Parameter | Fungsi | Shape |
+| --- | --- | --- |
+| `user_book_array` | Input kombinasi user-book | `(n_books, 2)` |
+| Output model | Predicted ratings (normalized 0-1) | `(n_books, 1)` |
+| `.flatten()` | Konversi ke 1D array | `(n_books,)` |
+
+
+***
+
+**2. Identifikasi Top 10 Rekomendasi**
+
+```python
+top_ratings_indices = ratings.argsort()[-10:][::-1]
+```
+
+**Cara Kerja Step-by-Step**
+
+**A. `.argsort()`**
+
+```python
+ratings = [0.23, 0.89, 0.45, 0.67, 0.91, 0.12]
+ratings.argsort()  # Output: [5, 0, 2, 3, 1, 4]
+# Mengurutkan INDEX berdasarkan nilai (ascending)
+```
+
+**B. `[-10:]`**
+
+```python
+# Mengambil 10 index terakhir (rating tertinggi)
+top_10_indices = [1, 4]  # 2 teratas dari contoh
+```
+
+**C. `[::-1]`**
+
+```python
+# Membalik urutan menjadi descending
+top_ratings_indices = [4, 1]  # Rating tertinggi → terendah
+```
+
+**Hasil**
+
+Index buku dengan 10 rating prediksi tertinggi, terurut descending
+
+***
+
+**3. Mapping ke ISBN Asli**
+
+```python
+recommended_book_id = [
+    isbn_decoded.get(book_not_readed[x][0]) for x in top_ratings_indices
+]
+```
+
+**Cara Kerja**
+
+**A. Ekstraksi Encoded Book ID**
+
+```python
+# Untuk setiap index dalam top_ratings_indices:
+x = top_ratings_indices[0]  # Index pertama
+book_encoded_id = book_not_readed[x][0]  # Encoded book ID
+```
+
+**B. Decoding ke ISBN**
+
+```python
+isbn_original = isbn_decoded.get(book_encoded_id)
+# Konversi encoded ID kembali ke ISBN asli
+```
+
+**Hasil**
+
+List ISBN asli untuk 10 buku dengan prediksi rating tertinggi
+
+***
+
+**4. Menampilkan Preferensi User Historis**
+
+```python
+top_book_user = (
+    readed_book_by_user.sort_values(
+        by = 'Book-Rating',
+        ascending=False
+    )
+    .head(5)
+    .ISBN.values
+)
+```
+
+**Parameter dan Fungsi**
+
+| Parameter | Fungsi |
+| --- | --- |
+| `by='Book-Rating'` | Kolom untuk sorting |
+| `ascending=False` | Urutan descending (rating tinggi ke rendah) |
+| `.head(5)` | Ambil 5 buku teratas |
+| `.ISBN.values` | Ekstrak array ISBN |
+
+**Tujuan**
+
+Menampilkan **konteks preferensi** user untuk memvalidasi rekomendasi
+
+***
+
+**5. Display Buku dengan Rating Tinggi dari User**
+
+```python
+book_df_rows = book_df[book_df['isbn'].isin(top_book_user)].drop_duplicates()
+for row in book_df_rows.itertuples():
+    print(row.isbn, ':', row.title)
+```
+
+**Cara Kerja**
+
+- **`.isin(top_book_user)`**: Filter buku yang ada dalam top 5 user
+- **`.drop_duplicates()`**: Hapus duplikasi jika ada
+- **`.itertuples()`**: Iterator untuk setiap baris
+- **`row.isbn`, `row.title`**: Akses kolom ISBN dan title
+
+***
+
+**6. Display Top 10 Rekomendasi**
+
+```python
+recommended_book = book_df[book_df['isbn'].isin(recommended_book_id)].drop_duplicates()
+for row in recommended_book.itertuples():
+    print(row.isbn, ':', row.title)
+```
+
+**Fungsi Sama dengan Section 5**
+
+Menampilkan detail buku yang direkomendasikan model
+
+***
+
+**7. Analisis Output**
+
+**A. User Profile (User 231210)**
+
+```javascript
+Book with high ratings from user:
+1. The Advocate Adviser (Gay Columnist)
+2. Physicians' Desk Reference 1998
+3. Who's in a Family?
+4. Times Family Atlas of the World
+5. Real Kids, Real Adventures #1
+```
+
+**Analisis Preferensi**:
+
+- **Diverse Interests**: Kesehatan, keluarga, petualangan
+- **Non-fiction Tendency**: Referensi dan panduan
+- **Family-oriented**: Buku tentang keluarga dan anak
+
+**B. Model Recommendations**
+
+```javascript
+Top 10 Recommendations:
+1. Harry Potter Series (4 buku)
+2. Children's Poetry (Shel Silverstein)
+3. Love You Forever
+4. El Hobbit
+5. A Kiss for Little Bear
+```
+
+**Analisis Rekomendasi**:
+
+- **Genre Shift**: Model merekomendasikan fiksi anak
+- **Pattern Recognition**: Menangkap preferensi family-friendly content
+- **Popular Titles**: Buku-buku dengan rating tinggi secara umum
+
+Sistem berhasil menghasilkan rekomendasi yang **relevan** dan **berkualitas**, meskipun ada **room for improvement** dalam hal personalisasi yang lebih detail. Model menunjukkan kemampuan untuk menangkap pola preferensi dan menghasilkan rekomendasi yang **meaningful** untuk user.
+
+***
+# Evaluation
+
+Penjelasan Kode: Generasi Rekomendasi dan Output
+
+**1. Prediksi Rating dengan Model**
+
+```python
+ratings = model.predict(user_book_array).flatten()
+```
+
+**Cara Kerja**
+
+- **`model.predict()`**: Menjalankan forward pass model untuk semua kombinasi user-book
+- **Input**: `user_book_array` dengan shape `(n_books, 2)` → `[user_encoded, book_encoded]`
+- **`.flatten()`**: Mengkonversi output 2D menjadi 1D array
+
+**Parameter dan Fungsi**
+
+| Parameter | Fungsi | Shape |
+| --- | --- | --- |
+| `user_book_array` | Input kombinasi user-book | `(n_books, 2)` |
+| Output model | Predicted ratings (normalized 0-1) | `(n_books, 1)` |
+| `.flatten()` | Konversi ke 1D array | `(n_books,)` |
+
+
+***
+
+**2. Identifikasi Top 10 Rekomendasi**
+
+```python
+top_ratings_indices = ratings.argsort()[-10:][::-1]
+```
+
+**Cara Kerja Step-by-Step**
+
+**A. `.argsort()`**
+
+```python
+ratings = [0.23, 0.89, 0.45, 0.67, 0.91, 0.12]
+ratings.argsort()  # Output: [5, 0, 2, 3, 1, 4]
+# Mengurutkan INDEX berdasarkan nilai (ascending)
+```
+
+**B. `[-10:]`**
+
+```python
+# Mengambil 10 index terakhir (rating tertinggi)
+top_10_indices = [1, 4]  # 2 teratas dari contoh
+```
+
+**C. `[::-1]`**
+
+```python
+# Membalik urutan menjadi descending
+top_ratings_indices = [4, 1]  # Rating tertinggi → terendah
+```
+
+**Hasil**
+
+Index buku dengan 10 rating prediksi tertinggi, terurut descending
+
+***
+
+**3. Mapping ke ISBN Asli**
+
+```python
+recommended_book_id = [
+    isbn_decoded.get(book_not_readed[x][0]) for x in top_ratings_indices
+]
+```
+
+**Cara Kerja**
+
+**A. Ekstraksi Encoded Book ID**
+
+```python
+# Untuk setiap index dalam top_ratings_indices:
+x = top_ratings_indices[0]  # Index pertama
+book_encoded_id = book_not_readed[x][0]  # Encoded book ID
+```
+
+**B. Decoding ke ISBN**
+
+```python
+isbn_original = isbn_decoded.get(book_encoded_id)
+# Konversi encoded ID kembali ke ISBN asli
+```
+
+**Hasil**
+
+List ISBN asli untuk 10 buku dengan prediksi rating tertinggi
+
+***
+
+**4. Menampilkan Preferensi User Historis**
+
+```python
+top_book_user = (
+    readed_book_by_user.sort_values(
+        by = 'Book-Rating',
+        ascending=False
+    )
+    .head(5)
+    .ISBN.values
+)
+```
+
+**Parameter dan Fungsi**
+
+| Parameter | Fungsi |
+| --- | --- |
+| `by='Book-Rating'` | Kolom untuk sorting |
+| `ascending=False` | Urutan descending (rating tinggi ke rendah) |
+| `.head(5)` | Ambil 5 buku teratas |
+| `.ISBN.values` | Ekstrak array ISBN |
+
+**Tujuan**
+
+Menampilkan **konteks preferensi** user untuk memvalidasi rekomendasi
+
+***
+
+**5. Display Buku dengan Rating Tinggi dari User**
+
+```python
+book_df_rows = book_df[book_df['isbn'].isin(top_book_user)].drop_duplicates()
+for row in book_df_rows.itertuples():
+    print(row.isbn, ':', row.title)
+```
+
+**Cara Kerja**
+
+- **`.isin(top_book_user)`**: Filter buku yang ada dalam top 5 user
+- **`.drop_duplicates()`**: Hapus duplikasi jika ada
+- **`.itertuples()`**: Iterator untuk setiap baris
+- **`row.isbn`, `row.title`**: Akses kolom ISBN dan title
+
+***
+
+**6. Display Top 10 Rekomendasi**
+
+```python
+recommended_book = book_df[book_df['isbn'].isin(recommended_book_id)].drop_duplicates()
+for row in recommended_book.itertuples():
+    print(row.isbn, ':', row.title)
+```
+
+**Fungsi Sama dengan Section 5**
+
+Menampilkan detail buku yang direkomendasikan model
+
+***
+
+**7. Analisis Output**
+
+**A. User Profile (User 231210)**
+
+```javascript
+Book with high ratings from user:
+1. The Advocate Adviser (Gay Columnist)
+2. Physicians' Desk Reference 1998
+3. Who's in a Family?
+4. Times Family Atlas of the World
+5. Real Kids, Real Adventures #1
+```
+
+**Analisis Preferensi**:
+
+- **Diverse Interests**: Kesehatan, keluarga, petualangan
+- **Non-fiction Tendency**: Referensi dan panduan
+- **Family-oriented**: Buku tentang keluarga dan anak
+
+**B. Model Recommendations**
+
+```javascript
+Top 10 Recommendations:
+1. Harry Potter Series (4 buku)
+2. Children's Poetry (Shel Silverstein)
+3. Love You Forever
+4. El Hobbit
+5. A Kiss for Little Bear
+```
+
+**Analisis Rekomendasi**:
+
+- **Genre Shift**: Model merekomendasikan fiksi anak
+- **Pattern Recognition**: Menangkap preferensi family-friendly content
+- **Popular Titles**: Buku-buku dengan rating tinggi secara umum
+
+Sistem berhasil menghasilkan rekomendasi yang **relevan** dan **berkualitas**, meskipun ada **room for improvement** dalam hal personalisasi yang lebih detail. Model menunjukkan kemampuan untuk menangkap pola preferensi dan menghasilkan rekomendasi yang **meaningful** untuk user.
+
+# Penjelasan Evaluasi Model Collaborative Filtering
+
+## 1. Fungsi dan Tujuan Evaluasi
+
+### **Tujuan Utama Evaluasi:**
+
+Evaluasi model bertujuan untuk mengukur seberapa baik sistem rekomendasi Collaborative Filtering dapat **menjawab problem statement** yang telah dirumuskan:
+
+1. **Mempercepat proses pencarian buku**: Dengan mengukur akurasi prediksi rating, kita dapat memastikan sistem memberikan rekomendasi yang relevan, sehingga pengguna tidak perlu menghabiskan waktu mencari buku secara manual.
+
+2. **Mengembangkan sistem rekomendasi yang akurat**: Evaluasi memvalidasi kemampuan model dalam memprediksi preferensi pengguna berdasarkan data rating historis.
+
+### **Fungsi Evaluasi:**
+
+- **Validasi Performa**: Memastikan model dapat memprediksi rating dengan akurat
+- **Deteksi Overfitting**: Mengidentifikasi apakah model terlalu spesifik pada data training
+- **Interpretasi Bisnis**: Menerjemahkan metrik teknis ke dalam konteks bisnis yang dapat dipahami
+- **Optimasi Model**: Memberikan insight untuk perbaikan model di masa depan
+
+***
+
+## 2. Cara Kerja Sistem Evaluasi
+
+### **Alur Kerja Evaluasi:**
+
+```javascript
+Data Test (X_val, Y_val) → Prediksi Model → Denormalisasi → Perhitungan Metrik → Interpretasi
+```
+
+### **Proses Detail:**
+
+1. **Persiapan Data Test**:
+
+- Menggunakan validation set sebagai data test
+- Data berisi pasangan (user_encoded, isbn_encoded) dan rating yang dinormalisasi
+
+2. **Prediksi Model**:
+
+- Model memprediksi rating untuk pasangan user-book pada data test
+- Output berupa nilai probabilitas (0-1) karena menggunakan sigmoid activation
+
+3. **Denormalisasi**:
+
+- Mengkonversi hasil prediksi dari skala 0-1 kembali ke skala asli 0-10
+- Formula: `rating_asli = normalized_rating × (max - min) + min`
+
+4. **Perhitungan Metrik**:
+
+- Menghitung berbagai metrik evaluasi pada skala asli dan normalized
+- Membandingkan prediksi dengan rating aktual
+
+5. **Analisis dan Interpretasi**:
+
+- Mengkategorikan performa model
+- Memberikan rekomendasi perbaikan
+
+***
+
+## 3. Parameter dan Metrik yang Digunakan
+
+### **A. Parameter Normalisasi:**
+
+| Parameter | Nilai | Fungsi |
+| --- | --- | --- |
+| `min` | Rating minimum (0) | Batas bawah normalisasi |
+| `max` | Rating maximum (10) | Batas atas normalisasi |
+| **Formula** | `(x - min) / (max - min)` | Mengkonversi rating ke skala 0-1 |
+
+**Fungsi Normalisasi:**
+
+- Menstandardisasi input untuk model neural network
+- Membantu konvergensi training yang lebih stabil
+- Memungkinkan penggunaan sigmoid activation function
+
+### **B. Metrik Evaluasi Utama:**
+
+#### **1. Root Mean Squared Error (RMSE)**
+
+```python
+rmse = √(Σ(y_true - y_pred)²/n)
+```
+
+- **Fungsi**: Mengukur rata-rata kesalahan prediksi dengan memberikan penalti lebih besar pada error yang besar
+- **Interpretasi**: Semakin rendah semakin baik
+- **Skala**: Sama dengan skala rating asli (0-10)
+- **Keunggulan**: Sensitif terhadap outlier, cocok untuk deteksi prediksi yang sangat meleset
+
+#### **2. Mean Absolute Error (MAE)**
+
+```python
+mae = Σ|y_true - y_pred|/n
+```
+
+- **Fungsi**: Mengukur rata-rata absolut kesalahan prediksi
+- **Interpretasi**: Rata-rata seberapa jauh prediksi dari nilai sebenarnya
+- **Keunggulan**: Lebih robust terhadap outlier dibanding RMSE
+- **Konteks Bisnis**: Menunjukkan rata-rata kesalahan prediksi rating dalam poin
+
+#### **3. R² Score (Coefficient of Determination)**
+
+```python
+r2 = 1 - (SS_res / SS_tot)
+```
+
+- **Fungsi**: Mengukur seberapa baik model menjelaskan variabilitas data
+- **Range**: -∞ hingga 1 (1 = perfect fit)
+- **Interpretasi**:
+- 0.9-1.0: Excellent
+- 0.8-0.9: Very Good
+- 0.7-0.8: Good
+- <0.7: Perlu perbaikan
+
+#### **4. Mean Absolute Percentage Error (MAPE)**
+
+```python
+mape = (100/n) × Σ|((y_true - y_pred)/y_true)|
+```
+
+- **Fungsi**: Mengukur kesalahan dalam bentuk persentase
+- **Keunggulan**: Scale-independent, mudah diinterpretasi bisnis
+- **Interpretasi**: Persentase rata-rata kesalahan prediksi
+
+### **C. Metrik Akurasi Toleransi:**
+
+#### **Akurasi ±1 Poin**
+
+```python
+accuracy_1 = (jumlah_prediksi_dalam_toleransi_1_poin / total_prediksi) × 100%
+```
+
+- **Fungsi**: Mengukur persentase prediksi yang akurat dalam toleransi ±1 poin rating
+- **Konteks Bisnis**: Menunjukkan seberapa sering sistem memberikan rekomendasi yang "hampir tepat"
+
+#### **Akurasi ±2 Poin**
+
+```python
+accuracy_2 = (jumlah_prediksi_dalam_toleransi_2_poin / total_prediksi) × 100%
+```
+
+- **Fungsi**: Mengukur persentase prediksi yang dapat diterima dalam toleransi ±2 poin
+- **Konteks Bisnis**: Standar minimum untuk rekomendasi yang "cukup baik"
+
+***
+
+## 4. Analisis Kategori Rating
+
+### **Kategorisasi Rating:**
+
+- **Low (0-3)**: Buku yang tidak disukai
+- **Medium (4-6)**: Buku dengan rating sedang
+- **High (7-10)**: Buku yang sangat disukai
+
+### **Fungsi Analisis Kategori:**
+
+1. **Identifikasi Bias Model**: Apakah model lebih baik memprediksi kategori tertentu
+2. **Strategi Rekomendasi**: Fokus pada kategori High untuk rekomendasi terbaik
+3. **Validasi Bisnis**: Memastikan model dapat membedakan preferensi pengguna
+
+***
+
+## 5. Menjawab Problem Statement
+
+### **Problem 1: Mempercepat Proses Pencarian Buku**
+
+**Solusi melalui Evaluasi:**
+
+- **Metrik Akurasi Toleransi**: Memastikan ≥80% prediksi dalam toleransi ±2 poin
+- **RMSE ≤ 2.0**: Menjamin prediksi yang cukup akurat untuk rekomendasi
+- **Analisis Kategori High**: Fokus pada buku dengan rating tinggi untuk rekomendasi prioritas
+
+**Cara Kerja:**
+
+1. Sistem memprediksi rating untuk buku yang belum dibaca pengguna
+2. Mengurutkan buku berdasarkan prediksi rating tertinggi
+3. Memberikan top-10 rekomendasi yang paling relevan
+4. **Hasil**: Pengguna tidak perlu browsing manual, langsung mendapat rekomendasi personal
+
+### **Problem 2: Sistem Rekomendasi Berdasarkan Data Penilaian**
+
+**Solusi melalui Evaluasi:**
+
+- **R² Score ≥ 0.7**: Memastikan model dapat menangkap pola preferensi pengguna
+- **MAE ≤ 1.5**: Menjamin prediksi rating yang akurat
+- **Confusion Matrix**: Validasi kemampuan model membedakan preferensi
+
+**Cara Kerja:**
+
+1. **Collaborative Filtering**: Menganalisis pola rating pengguna serupa
+2. **Matrix Factorization**: Mengidentifikasi faktor laten yang mempengaruhi preferensi
+3. **Embedding Learning**: Mempelajari representasi user dan book dalam ruang laten
+4. **Prediksi Rating**: Menghitung kemungkinan rating untuk buku yang belum dibaca
+
+***
+
+## 6. Interpretasi Hasil Evaluasi
+
+### **Standar Performa yang Baik:**
+
+| Metrik | Excellent | Good | Fair | Poor |
+| --- | --- | --- | --- | --- |
+| RMSE | ≤ 1.5 | ≤ 2.0 | ≤ 2.5 | > 2.5 |
+| R² | ≥ 0.9 | ≥ 0.7 | ≥ 0.5 | < 0.5 |
+| Akurasi ±2 | ≥ 90% | ≥ 80% | ≥ 70% | < 70% |
+
+### **Konteks Bisnis:**
+
+- **RMSE 1.5**: Rata-rata kesalahan prediksi 1.5 poin dari rating sebenarnya
+- **Akurasi 80%**: 8 dari 10 rekomendasi memiliki rating yang cukup akurat
+- **R² 0.7**: Model dapat menjelaskan 70% variasi preferensi pengguna
+
+### **Dampak pada Problem Statement:**
+
+1. **Efisiensi Pencarian**: Model dengan performa baik dapat mengurangi waktu pencarian dari jam menjadi detik
+2. **Akurasi Rekomendasi**: Sistem dapat memprediksi preferensi dengan tingkat kepercayaan tinggi
+3. **Personalisasi**: Setiap pengguna mendapat rekomendasi yang disesuaikan dengan riwayat rating mereka
+
+***
+
+## 7. Kesimpulan Evaluasi
+
+### **Validasi Solusi:**
+
+Sistem evaluasi memvalidasi bahwa model Collaborative Filtering dapat:
+
+1. ✅ **Mempercepat pencarian**: Memberikan rekomendasi instan berdasarkan preferensi
+2. ✅ **Memanfaatkan data rating**: Menggunakan pola rating historis untuk prediksi
+3. ✅ **Personalisasi**: Memberikan rekomendasi yang disesuaikan per pengguna
+4. ✅ **Akurasi tinggi**: Prediksi rating dengan tingkat kesalahan yang dapat diterima
+
+### **Kontribusi terhadap Problem Statement:**
+
+- **Efisiensi**: Mengurangi waktu pencarian buku dari manual browsing menjadi rekomendasi otomatis
+- **Akurasi**: Memastikan rekomendasi sesuai dengan preferensi pengguna berdasarkan data historis
+- **Skalabilitas**: Sistem dapat menangani jutaan interaksi user-book untuk memberikan rekomendasi real-time
+
+# Penjelasan Output Evaluasi Model Collaborative Filtering
+
+## 1. Analisis Output Evaluasi
+
+### **A. Persiapan Data Test**
+
+```javascript
+✅ Data test disiapkan dari validation set
+   • Jumlah sampel test: 172,467
+   • Range rating (normalized): 0.0000 - 1.0000
+```
+
+**Penjelasan Output:**
+
+- **172,467 sampel**: Dataset test yang cukup besar untuk evaluasi yang robust
+- **Range 0-1**: Konfirmasi bahwa normalisasi berhasil mengkonversi rating ke skala 0-1
+- **Normalisasi formula**: `(x - 0) / (10 - 0) = x/10` - sederhana karena rating asli sudah 0-10
+
+### **B. Hasil Prediksi Model**
+
+```javascript
+✅ Prediksi selesai!
+   • Range prediksi (normalized): 0.0000 - 0.8562
+   • Mean prediksi (normalized): 0.1548
+```
+
+**Analisis Kritis:**
+
+- **Range prediksi hanya 0-0.86**: Model tidak pernah memprediksi rating maksimal (setara 8.6/10)
+- **Mean prediksi 0.15**: Model cenderung memprediksi rating rendah (setara 1.5/10)
+- **⚠️ Problem**: Model mengalami **underprediction bias** - selalu memprediksi lebih rendah
+
+### **C. Denormalisasi ke Skala Asli**
+
+```javascript
+✅ Denormalisasi selesai!
+   • Mean rating asli: 2.87
+   • Mean prediksi asli: 1.55
+```
+
+**Interpretasi:**
+
+- **Gap signifikan**: Selisih 1.32 poin antara rata-rata actual vs predicted
+- **Bias sistematis**: Model konsisten memprediksi lebih rendah dari kenyataan
+- **Implikasi bisnis**: Sistem akan meremehkan preferensi pengguna
+
+***
+
+## 2. Analisis Metrik Evaluasi
+
+### **A. Metrik Utama - Performa Buruk**
+
+```javascript
+RMSE (Skala 0-10): 3.7085 (Poor)
+MAE (Skala 0-10): 2.7243
+R² Score: 0.0735 (Poor)
+```
+
+**Penjelasan Detail:**
+
+#### **RMSE = 3.71**
+
+- **Interpretasi**: Rata-rata kesalahan prediksi 3.71 poin dari rating sebenarnya
+- **Konteks**: Pada skala 0-10, ini adalah kesalahan 37% - sangat tinggi
+- **Standar industri**: RMSE yang baik untuk sistem rekomendasi biasanya <2.0
+- **⚠️ Masalah**: Model tidak reliable untuk prediksi rating
+
+#### **MAE = 2.72**
+
+- **Interpretasi**: Rata-rata absolut kesalahan 2.72 poin
+- **Konteks bisnis**: Jika user sebenarnya rating 8, model prediksi ~5.3
+- **Dampak**: Rekomendasi tidak akurat, user mungkin tidak puas
+
+#### **R² = 0.0735**
+
+- **Interpretasi**: Model hanya menjelaskan 7.35% variasi rating
+- **Artinya**: 92.65% variasi tidak dapat dijelaskan model
+- **⚠️ Masalah kritis**: Model hampir tidak berguna untuk prediksi
+
+### **B. MAPE Anomali**
+
+```javascript
+MAPE: 6987152963.16%
+```
+
+**Penjelasan Anomali:**
+
+- **Penyebab**: Division by zero atau nilai rating actual = 0
+- **Formula MAPE**: `|actual - predicted| / actual × 100%`
+- **Masalah**: Ketika actual = 0, pembagian menghasilkan infinity
+- **Solusi**: MAPE tidak cocok untuk data dengan nilai 0
+
+### **C. Akurasi Toleransi**
+
+```javascript
+Akurasi dalam toleransi ±1 poin: 33.81%
+Akurasi dalam toleransi ±2 poin: 54.04%
+```
+
+**Interpretasi:**
+
+- **33.81% dalam ±1**: Hanya 1 dari 3 prediksi yang "hampir benar"
+- **54.04% dalam ±2**: Hanya setengah prediksi yang "cukup dapat diterima"
+- **Standar industri**: Minimal 80% untuk ±2 poin
+- **⚠️ Kesimpulan**: Akurasi tidak memadai untuk sistem produksi
+
+***
+
+## 3. Analisis Distribusi dan Visualisasi
+
+### **A. Statistik Deskriptif**
+
+```javascript
+       Actual  Predicted
+Mean   2.8666     1.5477
+Std    3.8528     1.2013
+Min    0.0000     0.0003
+Max   10.0000     8.5624
+```
+
+**Analisis Mendalam:**
+
+#### **Perbedaan Mean (2.87 vs 1.55)**
+
+- **Gap**: 1.32 poin - bias sistematis yang signifikan
+- **Penyebab**: Model terlalu konservatif dalam prediksi
+- **Dampak**: Sistem akan meremehkan preferensi user
+
+#### **Perbedaan Standard Deviation (3.85 vs 1.20)**
+
+- **Actual**: Variasi tinggi (0-10) - data natural
+- **Predicted**: Variasi rendah (0-1.2) - model tidak confident
+- **⚠️ Problem**: Model tidak dapat menangkap diversitas preferensi
+
+#### **Range Prediction (0-8.56)**
+
+- **Missing high ratings**: Model tidak pernah prediksi >8.6
+- **Implikasi**: Buku bagus tidak akan direkomendasikan dengan confidence tinggi
+
+### **B. Analisis Visualisasi**
+
+#### **Distribution Plot:**
+
+- **Actual**: Distribusi U-shaped (banyak rating 0 dan tinggi)
+- **Predicted**: Distribusi exponential decay (dominasi rating rendah)
+- **⚠️ Masalah**: Model tidak memahami pola preferensi user yang sebenarnya
+
+#### **Box Plot:**
+
+- **Actual**: Median ~7, quartile range luas
+- **Predicted**: Median ~1, range sangat sempit
+- **Interpretasi**: Model terlalu bias ke rating rendah
+
+***
+
+## 4. Analisis Per Kategori Rating
+
+### **A. Performance Per Kategori**
+
+```javascript
+Low (0-3):   MAE: 1.12, RMSE: 1.44  ✅ Baik
+Medium (4-6): MAE: 3.25, RMSE: 3.44  ⚠️ Sedang  
+High (7-10):  MAE: 6.14, RMSE: 6.35  ❌ Buruk
+```
+
+**Insight Penting:**
+
+- **Model baik untuk rating rendah**: Error hanya 1.12 poin
+- **Model buruk untuk rating tinggi**: Error 6.14 poin
+- **Pola**: Semakin tinggi rating actual, semakin buruk prediksi
+- **⚠️ Implikasi**: Sistem tidak dapat mengidentifikasi buku berkualitas tinggi
+
+### **B. Confusion Matrix Analysis**
+
+```javascript
+              precision    recall  f1-score   support
+Low (0-3)       0.67      0.97      0.79    108977
+Medium (4-6)    0.14      0.13      0.13     14567  
+High (7-10)     0.91      0.03      0.06     48923
+```
+
+**Analisis Detail:**
+
+#### **Low Category (0-3):**
+
+- **Recall 97%**: Model sangat baik mendeteksi rating rendah
+- **Precision 67%**: 2/3 prediksi "low" benar
+- **Interpretasi**: Model bias memprediksi semua sebagai "low"
+
+#### **High Category (7-10):**
+
+- **Recall 3%**: Model hampir tidak pernah deteksi rating tinggi
+- **Precision 91%**: Jika prediksi "high", biasanya benar
+- **⚠️ Problem kritis**: Model gagal mengidentifikasi preferensi tinggi
+
+#### **Overall Accuracy: 63%**
+
+- **Interpretation**: 6 dari 10 kategori prediksi benar
+- **Bias**: Akurasi tinggi karena dominasi prediksi "low"
+
+***
+
+## 5. Analisis Training Performance
+
+### **A. Overfitting Detection**
+
+```javascript
+Training RMSE: 0.3230
+Validation RMSE: 0.3379
+Selisih: 0.0150
+⚠️ Model mengalami sedikit overfitting
+```
+
+**Interpretasi:**
+
+- **Gap kecil**: 0.015 - overfitting minimal
+- **Bukan masalah utama**: Performa buruk bukan karena overfitting
+- **Root cause**: Model capacity atau architecture yang tidak optimal
+
+***
+
+## 6. Diagnosis Masalah dan Solusi
+
+### **A. Identifikasi Masalah Utama**
+
+#### **1. Underprediction Bias**
+
+- **Gejala**: Mean predicted (1.55) << Mean actual (2.87)
+- **Penyebab**: Sigmoid activation + loss function combination
+- **Dampak**: Sistem meremehkan semua preferensi
+
+#### **2. Limited Prediction Range**
+
+- **Gejala**: Max prediction hanya 8.56/10
+- **Penyebab**: Model tidak confident untuk prediksi tinggi
+- **Dampak**: Buku berkualitas tidak direkomendasikan optimal
+
+#### **3. Poor High-Rating Detection**
+
+- **Gejala**: Recall 3% untuk kategori High
+- **Penyebab**: Model tidak belajar pattern untuk rating tinggi
+- **Dampak**: Gagal mengidentifikasi buku yang benar-benar disukai
+
+### **B. Rekomendasi Perbaikan**
+
+#### **1. Architecture Improvements**
+
+```python
+# Tambahkan layer dan regularization
+model = Sequential([
+    Embedding(...),
+    Dropout(0.3),
+    Dense(128, activation='relu'),
+    Dense(64, activation='relu'),
+    Dense(1, activation='linear')  # Ganti sigmoid dengan linear
+])
+```
+
+#### **2. Loss Function Optimization**
+
+```python
+# Ganti dari BinaryCrossentropy ke MSE
+model.compile(
+    loss='mse',  # Lebih cocok untuk regression
+    optimizer=Adam(learning_rate=1e-3),
+    metrics=['mae', 'rmse']
+)
+```
+
+#### **3. Data Balancing**
+
+```python
+# Balance dataset per kategori rating
+from sklearn.utils.class_weight import compute_class_weight
+class_weights = compute_class_weight('balanced', ...)
+```
+
+***
+
+## 7. Menjawab Problem Statement (Revisi)
+
+### **Problem 1: Mempercepat Proses Pencarian Buku**
+
+**Status Saat Ini: ❌ BELUM TERCAPAI**
+
+**Analisis:**
+
+- **Akurasi rendah (54% dalam ±2)**: Rekomendasi tidak reliable
+- **Bias ke rating rendah**: Sistem tidak akan merekomendasikan buku bagus
+- **Dampak**: User masih perlu manual search karena rekomendasi tidak akurat
+
+**Solusi yang Diperlukan:**
+
+- Tingkatkan akurasi minimal 80% dalam toleransi ±2
+- Perbaiki bias underprediction
+- Optimasi untuk deteksi rating tinggi
+
+### **Problem 2: Sistem Rekomendasi Berdasarkan Data Penilaian**
+
+**Status Saat Ini: ❌ BELUM OPTIMAL**
+
+**Analisis:**
+
+- **R² = 7.35%**: Model tidak menangkap pola preferensi
+- **Poor high-rating detection**: Gagal identify buku berkualitas
+- **Systematic bias**: Tidak memanfaatkan data rating secara optimal
+
+**Solusi yang Diperlukan:**
+
+- Redesign architecture untuk better pattern learning
+- Implement hybrid approach (content + collaborative)
+- Advanced feature engineering
+
+***
+
+## 8. Kesimpulan dan Rekomendasi
+
+### **A. Status Evaluasi**
+
+```javascript
+🚨 MODEL PERLU PERBAIKAN SIGNIFIKAN
+❌ RMSE: 3.71 (Target: <2.0)
+❌ R²: 7.35% (Target: >70%)
+❌ Akurasi ±2: 54% (Target: >80%)
+```
+
+### **B. Prioritas Perbaikan**
+
+1. **Fix underprediction bias** - Ganti activation function
+2. **Improve architecture** - Tambah complexity dan regularization  
+3. **Balance training data** - Handle class imbalance
+4. **Optimize hyperparameters** - Learning rate, embedding size, epochs
+
+### **C. Expected Improvements**
+
+Dengan perbaikan yang tepat, target performance:
+
+- **RMSE**: 3.71 → <2.0 (improvement 46%)
+- **R²**: 7.35% → >70% (improvement 850%)
+- **Akurasi ±2**: 54% → >80% (improvement 48%)
+
+### **D. Business Impact**
+
+Setelah perbaikan, sistem akan dapat:
+
+- ✅ Memberikan rekomendasi akurat dan personal
+- ✅ Mengidentifikasi buku berkualitas tinggi
+- ✅ Mempercepat discovery proses untuk user
+- ✅ Meningkatkan user satisfaction dan engagement
+
+**Status Final: Model memerlukan iterasi pengembangan sebelum deployment produksi.**

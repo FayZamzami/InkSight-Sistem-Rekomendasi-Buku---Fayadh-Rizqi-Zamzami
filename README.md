@@ -456,6 +456,8 @@ Dataset ratings menunjukkan **kualitas tinggi** dengan **completeness 100%** dan
 
 ***
 
+## Data Preparation 
+
 ### 🔧 Data Preprocessing - Dataset Overview
 
 #### Tujuan
@@ -523,8 +525,6 @@ Hasil overview ini memberikan **baseline metrics** yang penting untuk:
 - **Performance Expectations**: Baseline untuk evaluasi model
 
 ***
-
-## Data Preparation 
 
 ### 🔗 Data Integration - Menggabungkan data ratings dengan judul buku
 

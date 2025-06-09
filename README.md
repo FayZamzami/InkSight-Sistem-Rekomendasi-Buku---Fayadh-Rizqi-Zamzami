@@ -103,7 +103,7 @@ Berdasarkan analisis yang telah dilakukan, diperoleh hasil sebagai berikut:
 - Skala rating berkisar antara 0 hingga 10
 
 
-# Book Recommendation System - Data Loading & Initial Exploration
+### Book Recommendation System - Data Loading & Initial Exploration
 
 ### 📊 Data Loading
 
@@ -147,75 +147,6 @@ Dataset books berisi informasi lengkap tentang buku dengan fitur-fitur berikut:
 ##### Key Insights dari Initial Exploration:
 
 ***
-
-# 🔧 Data Preprocessing - Column Standardization
-
-### Tujuan Standardisasi Kolom
-
-Tahap preprocessing pertama adalah **standardisasi nama kolom** untuk memastikan konsistensi dalam penamaan dan mempermudah akses data selama pengembangan model.
-
-### Implementasi
-
-```python
-# Standardisasi nama kolom untuk semua dataset
-books.columns = books.columns.str.lower()
-books.columns = books.columns.str.replace("-","_")
-
-ratings.columns = ratings.columns.str.lower()
-ratings.columns = ratings.columns.str.replace("-","_")
-
-users.columns = users.columns.str.lower()
-users.columns = users.columns.str.replace("-","_")
-```
-
-### Cara Kerja & Parameter
-
-#### 1. **Konversi ke Huruf Kecil**
-
-```python
-.str.lower()
-```
-
-| Parameter | Fungsi | Contoh Transformasi |
-| --- | --- | --- |
-| **`.str.lower()`** | Mengkonversi semua huruf menjadi lowercase | `"Book-Title"` → `"book-title"` |
-
-#### 2. **Penggantian Karakter**
-
-```python
-.str.replace("-", "_")
-```
-
-| Parameter | Fungsi | Nilai |
-| --- | --- | --- |
-| **Pattern**: `"-"` | Target karakter yang akan diganti | Tanda hubung |
-| **Replacement**: `"_"` | Karakter pengganti | Underscore |
-
-### Transformasi Kolom
-
-#### Before Standardization:
-
-```javascript
-Books: ['ISBN', 'Book-Title', 'Book-Author', 'Year-Of-Publication', 'Publisher']
-Ratings: ['User-ID', 'ISBN', 'Book-Rating']
-Users: ['User-ID', 'Location', 'Age']
-```
-
-#### After Standardization:
-
-```javascript
-Books: ['isbn', 'book_title', 'book_author', 'year_of_publication', 'publisher']
-Ratings: ['user_id', 'isbn', 'book_rating']
-Users: ['user_id', 'location', 'age']
-```
-
-
-### Verifikasi Hasil
-
-```python
-# Menampilkan dataset users setelah standardisasi
-users.head()
-```
 
 ### 📊 Data Quality Analysis - Books Dataframe
 
@@ -354,7 +285,7 @@ users.info()
 
 ***
 
-# 📈 Ratings Dataset Analysis
+### 📈 Ratings Dataset Analysis
 
 #### Dataset Overview
 
@@ -457,6 +388,75 @@ Dataset ratings menunjukkan **kualitas tinggi** dengan **completeness 100%** dan
 ***
 
 ## Data Preparation 
+
+### 🔧 Data Preprocessing - Column Standardization
+
+##### Tujuan Standardisasi Kolom
+
+Tahap preprocessing pertama adalah **standardisasi nama kolom** untuk memastikan konsistensi dalam penamaan dan mempermudah akses data selama pengembangan model.
+
+##### Implementasi
+
+```python
+# Standardisasi nama kolom untuk semua dataset
+books.columns = books.columns.str.lower()
+books.columns = books.columns.str.replace("-","_")
+
+ratings.columns = ratings.columns.str.lower()
+ratings.columns = ratings.columns.str.replace("-","_")
+
+users.columns = users.columns.str.lower()
+users.columns = users.columns.str.replace("-","_")
+```
+
+##### Cara Kerja & Parameter
+
+1. **Konversi ke Huruf Kecil**
+
+```python
+.str.lower()
+```
+
+| Parameter | Fungsi | Contoh Transformasi |
+| --- | --- | --- |
+| **`.str.lower()`** | Mengkonversi semua huruf menjadi lowercase | `"Book-Title"` → `"book-title"` |
+
+2. **Penggantian Karakter**
+
+```python
+.str.replace("-", "_")
+```
+
+| Parameter | Fungsi | Nilai |
+| --- | --- | --- |
+| **Pattern**: `"-"` | Target karakter yang akan diganti | Tanda hubung |
+| **Replacement**: `"_"` | Karakter pengganti | Underscore |
+
+##### Transformasi Kolom
+
+**Before Standardization:**
+
+```javascript
+Books: ['ISBN', 'Book-Title', 'Book-Author', 'Year-Of-Publication', 'Publisher']
+Ratings: ['User-ID', 'ISBN', 'Book-Rating']
+Users: ['User-ID', 'Location', 'Age']
+```
+
+**After Standardization:**
+
+```javascript
+Books: ['isbn', 'book_title', 'book_author', 'year_of_publication', 'publisher']
+Ratings: ['user_id', 'isbn', 'book_rating']
+Users: ['user_id', 'location', 'age']
+```
+
+
+##### Verifikasi Hasil
+
+```python
+# Menampilkan dataset users setelah standardisasi
+users.head()
+```
 
 ### 🔧 Data Preprocessing - Dataset Overview
 

@@ -524,6 +524,8 @@ Hasil overview ini memberikan **baseline metrics** yang penting untuk:
 
 ***
 
+## Data Preparation 
+
 ### 🔗 Data Integration - Menggabungkan data ratings dengan judul buku
 
 #### Tujuan
@@ -602,8 +604,6 @@ match_rate = len(successful_matches) / len(all_book) * 100
 ```
 
 ***
-
-## Data Preparation 
 
 ### Missing Values Handling
 
